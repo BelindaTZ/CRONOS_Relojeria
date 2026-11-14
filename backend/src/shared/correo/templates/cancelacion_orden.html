@@ -1,0 +1,14 @@
+{% extends "_layout.html" %}
+{% block titulo %}Orden de compra #{{ orden }} cancelada{% endblock %}
+{% block cuerpo %}
+<p style="margin:0 0 16px;">Estimados {{ proveedor }},</p>
+<p style="margin:0 0 16px;">Les informamos que la orden de compra <strong>#{{ orden }}</strong> ha sido cancelada.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 20px;background-color:#F5F2EA;border:1px solid #E0D7C3;border-radius:8px;">
+  <tr><td style="padding:14px 18px;font-family:'Hanken Grotesk',Georgia,'Segoe UI',sans-serif;font-size:14px;color:#22252B;">
+    <strong style="color:#8B909A;text-transform:uppercase;font-size:11px;letter-spacing:1px;">Motivo</strong><br />
+    {{ motivo }}
+  </td></tr>
+</table>
+<p style="margin:0 0 16px;">Si ya habían iniciado la preparación del pedido, por favor contáctennos para coordinar.</p>
+<p style="margin:0;color:#8B909A;font-size:13px;">Fecha de la cancelación: {{ fecha }}</p>
+{% endblock %}

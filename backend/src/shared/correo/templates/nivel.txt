@@ -1,0 +1,9 @@
+Estimado/a {{ cliente_nombre }},
+
+Gracias a su preferencia, ahora forma parte de nuestro nivel {{ nivel_nombre }}.
+{% if beneficios %}
+Sus nuevos beneficios:
+{% for b in beneficios %}- {{ b }}
+{% endfor %}
+{% endif %}
+Gracias por ser parte de CRONOS.

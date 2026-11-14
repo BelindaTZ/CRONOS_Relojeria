@@ -1,0 +1,14 @@
+Estimado/a {{ cliente_nombre }},
+
+Gracias por confiarnos el servicio técnico de su reloj. Su orden de trabajo {{ ot_numero }} ya fue asignada a nuestro técnico.
+
+Técnico responsable: {{ tecnico.nombre }}
+{% if tecnico.email %}Correo: {{ tecnico.email }}{% endif %}
+{% if tecnico.especialidades %}Especialidades: {{ tecnico.especialidades | join(', ') }}{% endif %}
+{% if tecnico.certificaciones %}{{ tecnico.certificaciones }}{% endif %}
+
+Nuestro vendedor podrá contactarlo durante todo el proceso — esté atento/a a este correo, le avisaremos de cada avance.
+
+Consultas: {{ contacto_email }}
+
+Le avisaremos cuando el diagnóstico esté listo.

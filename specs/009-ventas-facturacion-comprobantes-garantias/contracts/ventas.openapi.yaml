@@ -1,0 +1,97 @@
+openapi: 3.1.0
+info: { title: "CRONOS — Ventas, Comprobantes y Garantías (009)", version: "0.1.0" }
+servers: [{ url: http://localhost:8000 }]
+security: [{ bearerAuth: [] }]
+paths:
+  /ventas:
+    get:
+      operationId: listVentas
+      parameters:
+        - { name: estado, in: query, schema: { type: string, enum: [borrador, confirmada, anulada] } }
+        - { name: cliente_id, in: query, schema: { type: integer } }
+        - { name: sucursal_id, in: query, schema: { type: integer } }
+        - { name: desde, in: query, schema: { type: string, format: date } }
+        - { name: hasta, in: query, schema: { type: string, format: date } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+      responses: { "200": { description: "Página de ventas (margen solo rol administrativo)" } }
+    post:
+      operationId: createVenta
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lineas]
+              properties:
+                cliente_id: { type: integer, nullable: true, description: "null solo para consumidor final (piezas sueltas bajo el monto)" }
+                sucursal_id: { type: integer }
+                cita_id: { type: integer, nullable: true }
+                lineas:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      item_tipo: { type: string, enum: [reloj, pieza] }
+                      reloj_id: { type: integer, nullable: true }
+                      pieza_id: { type: integer, nullable: true }
+                      cantidad: { type: integer, default: 1 }
+      responses:
+        "201": { description: Venta en borrador }
+        "422": { description: "Venta de reloj o total alto sin cliente identificado" }
+  /ventas/{id}:
+    get: { operationId: getVenta, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { "200": { description: "Venta (costo/margen solo rol administrativo)" } } }
+  /ventas/{id}/descuento:
+    post:
+      operationId: aplicarDescuentoVenta
+      description: Aplica UN descuento O UN cupón (exclusivos). Usa shared/descuentos (006).
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                descuento_id: { type: integer, nullable: true }
+                cupon_codigo: { type: string, nullable: true }
+      responses:
+        "200": { description: "Descuento aplicado; incluye decision de margen mínimo" }
+        "409": { description: "Requiere autorización de Gerencia General" }
+        "422": { description: "Se enviaron descuento y cupón" }
+  /ventas/{id}/pagos:
+    post:
+      operationId: registrarPagoVenta
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [medio_pago, monto], properties: { medio_pago: { type: string }, monto: { type: number }, referencia: { type: string } } } } } }
+      responses: { "201": { description: "Pago registrado; devuelve saldo" } }
+  /ventas/{id}/confirmar:
+    post:
+      operationId: confirmarVenta
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200": { description: "Confirmada: baja de stock, evento de serie, garantías, comprobantes, CxC del saldo, recálculo de nivel" }
+        "409": { description: "Stock/disponibilidad, o descuento requiere autorización" }
+  /ventas/{id}/anular:
+    post:
+      operationId: anularVenta
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [motivo], properties: { motivo: { type: string } } } } } }
+      responses:
+        "200": { description: "Anulada: reingreso de stock, reversa de margen y nivel, CxC anulada, documento de anulación" }
+        "409": { description: "El reloj está en servicio técnico" }
+  /ventas/{id}/garantias:
+    get: { operationId: getGarantiasVenta, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { "200": { description: "fabrica + tienda con periodos y fechas" } } }
+  /ventas/{id}/comprobantes:
+    get: { operationId: getComprobantesVenta, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { "200": { description: "URLs firmadas de comprobante y certificado (autenticado)" }, "403": { description: Sin permiso } } }
+  /cuentas-por-cobrar:
+    get:
+      operationId: listCuentasPorCobrar
+      parameters: [{ name: cliente_id, in: query, schema: { type: integer } }, { name: estado, in: query, schema: { type: string } }]
+      responses: { "200": { description: "CxC generadas por ventas/OT a crédito (aging en 010)" } }
+  /ventas-dia:
+    get:
+      operationId: getVentasDia
+      parameters: [{ name: fecha, in: query, schema: { type: string, format: date } }, { name: sucursal_id, in: query, schema: { type: integer } }]
+      responses: { "200": { description: "Total y margen del día (margen solo rol administrativo)" } }
+components:
+  securitySchemes: { bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT } }

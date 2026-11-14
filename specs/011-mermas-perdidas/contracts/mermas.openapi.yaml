@@ -1,0 +1,90 @@
+openapi: 3.1.0
+info: { title: "CRONOS — Mermas y Pérdidas (011)", version: "0.1.0" }
+servers: [{ url: http://localhost:8000 }]
+security: [{ bearerAuth: [] }]
+paths:
+  /mermas:
+    get:
+      operationId: listMermas
+      parameters:
+        - { name: causa, in: query, schema: { type: string } }
+        - { name: estado, in: query, schema: { type: string } }
+        - { name: sucursal_id, in: query, schema: { type: integer } }
+        - { name: desde, in: query, schema: { type: string, format: date } }
+        - { name: hasta, in: query, schema: { type: string, format: date } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+      responses: { "200": { description: "Página de mermas (costo_perdida solo rol administrativo; scope por sucursal)" } }
+    post:
+      operationId: createMerma
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bien_tipo, causa, fecha_evento, sucursal_id]
+              properties:
+                bien_tipo: { type: string, enum: [reloj, pieza] }
+                reloj_id: { type: integer, nullable: true }
+                pieza_id: { type: integer, nullable: true }
+                lote_id: { type: integer, nullable: true }
+                cantidad: { type: integer, default: 1 }
+                causa: { type: string, enum: [dano_tienda, dano_transito, robo_perdida, defecto_fabrica, dano_servicio, insumo_caducado] }
+                fecha_evento: { type: string, format: date }
+                sucursal_id: { type: integer }
+                orden_trabajo_id: { type: integer, nullable: true }
+                tecnico_id: { type: integer, nullable: true }
+                transferencia_id: { type: integer, nullable: true }
+      responses:
+        "201": { description: "Merma en_evaluacion; costo a costo de adquisición" }
+        "409": { description: "Bien vendido/dado de baja" }
+        "422": { description: "Cantidad > stock de la pieza" }
+  /mermas/{id}:
+    get: { operationId: getMerma, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { "200": { description: Merma + historial + soporte + reclamo } } }
+  /mermas/{id}/documentos:
+    post:
+      operationId: subirDocumentoMerma
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody: { content: { multipart/form-data: { schema: { type: object, properties: { tipo: { type: string, enum: [acta, fotografia, denuncia, otro] }, archivo: { type: string, format: binary } } } } } }
+      responses: { "201": { description: "Documento subido a bucket documentos" } }
+  /mermas/{id}/autorizar-baja:
+    post:
+      operationId: autorizarBajaMerma
+      description: Solo Gerencia General. Requerido si costo_perdida > umbral_merma_autorizacion.
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { observacion: { type: string } } } } } }
+      responses: { "201": { description: "Autorización registrada" }, "403": { description: "Solo Gerencia General" } }
+  /mermas/{id}/estado:
+    post:
+      operationId: cambiarEstadoMerma
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [estado], properties: { estado: { type: string, enum: [en_evaluacion, dado_de_baja, en_reclamo_proveedor, en_reclamo_seguro, reparado_reingresado] } } } } } }
+      responses:
+        "200": { description: "Estado cambiado. dado_de_baja: retiro de inventario + asiento de pérdida extraordinaria. reparado_reingresado: reingreso al stock." }
+        "409": { description: "dado_de_baja sobre el umbral sin autorización" }
+  /mermas/{id}/reclamo:
+    post: { operationId: crearReclamoMerma, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { "201": { description: Reclamo creado } } }
+    patch: { operationId: actualizarReclamoMerma, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { "200": { description: "Estado / monto recuperado actualizado" } } }
+  /reportes/mermas:
+    get:
+      operationId: getReporteMermas
+      parameters:
+        - { name: desde, in: query, schema: { type: string, format: date } }
+        - { name: hasta, in: query, schema: { type: string, format: date } }
+        - { name: causa, in: query, schema: { type: string } }
+        - { name: sucursal_id, in: query, schema: { type: integer } }
+      responses:
+        "200":
+          description: "Agrupado por causa con monto y frecuencia (exportable)"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    causa: { type: string }
+                    frecuencia: { type: integer }
+                    monto_total: { type: number }
+components:
+  securitySchemes: { bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT } }

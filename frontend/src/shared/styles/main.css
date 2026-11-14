@@ -1,0 +1,86 @@
+@import '../tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  font-family: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  background-color: var(--canvas);
+}
+
+@layer components {
+  .serif {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-weight: 600;
+    letter-spacing: 0.005em;
+  }
+
+  .cr-card {
+    background-color: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 14px;
+    box-shadow: var(--shadow-md);
+  }
+
+  .cr-input {
+    width: 100%;
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    background-color: var(--surface);
+    padding: 0.55rem 0.8rem;
+    font: inherit;
+    color: var(--ink);
+  }
+  .cr-input:focus {
+    outline: none;
+    border-color: var(--color-primary-500);
+    box-shadow: 0 0 0 3px var(--color-primary-100);
+  }
+
+  .cr-btn {
+    font: inherit;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 0.55rem 1.1rem;
+    cursor: pointer;
+    border: 1px solid transparent;
+  }
+  .cr-btn-primary {
+    background-color: var(--nav);
+    color: var(--nav-ink);
+  }
+  .cr-btn-ghost {
+    background-color: transparent;
+    color: var(--ink);
+    border-color: var(--hairline);
+  }
+  .cr-btn-ghost:hover {
+    border-color: var(--gold);
+    color: var(--gold-strong);
+  }
+  .cr-btn-danger {
+    background-color: var(--color-danger-600);
+    color: #fff;
+  }
+  .cr-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .cr-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+}

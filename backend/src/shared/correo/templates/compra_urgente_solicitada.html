@@ -1,0 +1,16 @@
+{% extends "_layout.html" %}
+{% block titulo %}Compra urgente solicitada{% endblock %}
+{% block cuerpo %}
+<p style="margin:0 0 16px;">Hola {{ encargado_nombre }},</p>
+<p style="margin:0 0 16px;">Un técnico necesita gestionar una compra urgente: falta stock de una pieza requerida para continuar una reparación en curso.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 20px;background-color:#F5F2EA;border:1px solid #E0D7C3;border-radius:8px;">
+  <tr><td style="padding:14px 18px;font-family:'Hanken Grotesk',Georgia,'Segoe UI',sans-serif;font-size:14px;color:#22252B;">
+    <strong style="color:#8B909A;text-transform:uppercase;font-size:11px;letter-spacing:1px;">Orden {{ ot_numero }}</strong><br />
+    Pieza: {{ pieza_codigo }} — {{ pieza_descripcion }}<br />
+    Cantidad requerida: {{ cantidad }}<br />
+    Sucursal: {{ sucursal_nombre }}
+    {% if nota %}<br />Nota del técnico: {{ nota }}{% endif %}
+  </td></tr>
+</table>
+<p style="margin:0;color:#8B909A;font-size:13px;">Registra la orden de compra al proveedor correspondiente marcándola como «urgente» para priorizarla.</p>
+{% endblock %}

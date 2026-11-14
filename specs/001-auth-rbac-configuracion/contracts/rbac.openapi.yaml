@@ -1,0 +1,106 @@
+openapi: 3.1.0
+info:
+  title: CRONOS — RBAC, Usuarios y Sucursales (001)
+  version: 0.1.0
+servers: [{ url: http://localhost:8000 }]
+security: [{ bearerAuth: [] }]
+paths:
+  /usuarios:
+    get:
+      operationId: listUsuarios
+      description: Búsqueda multi-criterio (nombre, identificación, email). Paginado.
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: size, in: query, schema: { type: integer, default: 20 } }
+      responses: { "200": { description: Página de usuarios } }
+    post:
+      operationId: createUsuario
+      responses: { "201": { description: Usuario creado }, "403": { description: Sin permiso } }
+  /usuarios/{id}:
+    patch:
+      operationId: updateUsuario
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200": { description: Actualizado }
+        "409": { description: Anti-lockout — es el último Gerencia General activo }
+  /usuarios/{id}/roles:
+    put:
+      operationId: setUsuarioRoles
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { "200": { description: Roles asignados }, "409": { description: Anti-lockout } }
+  /usuarios/{id}/sucursales:
+    put:
+      operationId: setUsuarioSucursales
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { "200": { description: Sucursales asignadas } }
+  /usuarios/{id}/excepciones:
+    put:
+      operationId: setExcepcionesUsuario
+      description: Concede/revoca operaciones puntuales sin cambiar el rol.
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                required: [modulo, efecto]
+                properties:
+                  modulo: { type: string }
+                  operacion: { type: string, nullable: true, enum: [crear, consultar, editar, eliminar, null] }
+                  efecto: { type: string, enum: [conceder, revocar] }
+      responses: { "200": { description: Excepciones guardadas (auditado) } }
+  /roles:
+    get: { operationId: listRoles, responses: { "200": { description: Lista de roles } } }
+    post: { operationId: createRole, responses: { "201": { description: Rol creado } } }
+  /roles/{id}/permisos:
+    get:
+      operationId: getRolePermisos
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { "200": { description: Matriz módulo→operaciones del rol } }
+    put:
+      operationId: setRolePermisos
+      description: >
+        Define acceso a módulo y operaciones. Guardar una operación en un módulo no
+        habilitado devuelve 422 (el acceso al módulo es prerrequisito). Auditado.
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                required: [modulo, acceso]
+                properties:
+                  modulo: { type: string }
+                  acceso: { type: boolean }
+                  operaciones: { type: array, items: { type: string, enum: [crear, consultar, editar, eliminar] } }
+      responses:
+        "200": { description: Matriz guardada }
+        "422": { description: Operación marcada sin acceso al módulo }
+  /modulos:
+    get: { operationId: listModulos, responses: { "200": { description: Catálogo de módulos (§3.1) } } }
+  /sucursales:
+    get:
+      operationId: listSucursales
+      parameters: [{ name: q, in: query, schema: { type: string } }]
+      responses: { "200": { description: Página de sucursales } }
+    post: { operationId: createSucursal, responses: { "201": { description: Sucursal creada } } }
+  /sucursales/{id}/inactivar:
+    post:
+      operationId: inactivarSucursal
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [motivo], properties: { motivo: { type: string, minLength: 5 } } }
+      responses:
+        "200": { description: Sucursal inactivada; se notificó por email a su personal }
+        "422": { description: Falta el motivo }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }

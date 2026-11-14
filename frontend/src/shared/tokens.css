@@ -1,0 +1,128 @@
+/**
+ * Tokens de CRONOS — Principio XI (constitución v1.7.0).
+ *
+ * Mundo visual ÚNICO: claro / marfil. Sin tema oscuro (`color-scheme: light`).
+ * El oro (Secondary) se usa como FILETE y como CIFRA, nunca como bloque de fondo.
+ * Superficies: el lienzo va unos tonos por debajo del blanco de las tarjetas.
+ *
+ * Escala Secondary y usos validados a WCAG AA:
+ *   oro texto/filete sobre marfil  → --color-secondary-600 #8A6D2B  (4,9:1)
+ *   oro acento sobre azul marino   → --color-secondary-300 #D8B876  (9,4:1)
+ *   superficie Secondary (insignia)→ --color-secondary-900 #3B2E16 + secondary-50 (12:1)
+ */
+
+:root {
+  color-scheme: light;
+
+  /* Superficies */
+  --canvas: #EFEBE0;
+  --surface: #FFFFFF;
+  --surface-sunk: #F4F0E4;
+  /* Encabezado de tabla: tono cálido más profundo + filete de oro tenue debajo,
+     para que NO se difumine con la tarjeta ni con el lienzo. */
+  --surface-head: #E8DFC9;
+  --table-head-border: #CBB98F;
+  --hairline: #E0D7C3;
+  --hairline-soft: #ECE4D3;
+  --shadow-sm: 0 1px 2px rgba(58, 46, 22, 0.06), 0 2px 6px -2px rgba(58, 46, 22, 0.06);
+  --shadow-md: 0 1px 2px rgba(58, 46, 22, 0.05), 0 10px 26px -10px rgba(58, 46, 22, 0.16);
+
+  /* Tinta */
+  --ink: #17191E;
+  --ink-2: #565E6B;
+  --ink-3: #8B909A;
+
+  /* Primary — azul marino (barra de navegación, acción primaria, encabezados) */
+  --color-primary-50: #F5F7FA;
+  --color-primary-100: #E6EBF2;
+  --color-primary-200: #C6D0DF;
+  --color-primary-300: #9FADC4;
+  --color-primary-400: #6B7C99;
+  --color-primary-500: #44557A;
+  --color-primary-600: #2E3D5F;
+  --color-primary-700: #1F2B47;
+  --color-primary-800: #161F36;
+  --color-primary-900: #0F172A;
+  --color-primary-950: #080C18;
+  --nav: var(--color-primary-900);
+  --nav-ink: #F6F7FA;
+  --nav-ink-2: #9AA6C0;
+
+  /* Secondary — dorado / bronce */
+  --color-secondary-50: #FBF6EC;
+  --color-secondary-100: #F4E9D0;
+  --color-secondary-200: #E7D0A0;
+  --color-secondary-300: #D8B876;
+  --color-secondary-400: #C6A052;
+  --color-secondary-500: #B48E38;
+  --color-secondary-600: #8A6D2B;
+  --color-secondary-700: #6B5320;
+  --color-secondary-800: #4E3D1C;
+  --color-secondary-900: #3B2E16;
+  --color-secondary-950: #241C0D;
+  /* --gold = oro para TEXTO/FILETE sobre marfil o blanco (700: AA en ambos fondos).
+     El dorado vivo (500/600) queda para acentos no textuales. */
+  --gold: var(--color-secondary-700);
+  --gold-strong: var(--color-secondary-800);
+  --gold-on-navy: var(--color-secondary-300);
+  --gold-deep: var(--color-secondary-900);
+  --gold-pale: var(--color-secondary-50);
+
+  /* Tertiary — verde esmeralda (éxito / confirmación, nunca decorativo) */
+  --color-tertiary-50: #ECFDF5;
+  --color-tertiary-100: #D1FAE5;
+  --color-tertiary-200: #A7F3D0;
+  --color-tertiary-300: #6EE7B7;
+  --color-tertiary-400: #34D399;
+  --color-tertiary-500: #10B981;
+  --color-tertiary-600: #059669;
+  --color-tertiary-700: #047857;
+  --color-tertiary-800: #065F46;
+  --color-tertiary-900: #064E3B;
+  --color-tertiary-950: #022C22;
+  --good: var(--color-tertiary-700);
+  --good-bg: #E9F3EE;
+
+  /* Neutral — gris pizarra */
+  --color-neutral-50: #F8FAFC;
+  --color-neutral-100: #F1F5F9;
+  --color-neutral-200: #E2E8F0;
+  --color-neutral-300: #CBD5E1;
+  --color-neutral-400: #94A3B8;
+  --color-neutral-500: #64748B;
+  --color-neutral-600: #475569;
+  --color-neutral-700: #334155;
+  --color-neutral-800: #1E293B;
+  --color-neutral-900: #0F172A;
+  --color-neutral-950: #020617;
+
+  /* Danger — rojo (acciones destructivas, errores de validación) */
+  --color-danger-50: #FEF2F2;
+  --color-danger-100: #FEE2E2;
+  --color-danger-200: #FECACA;
+  --color-danger-300: #FCA5A5;
+  --color-danger-400: #F87171;
+  --color-danger-500: #EF4444;
+  --color-danger-600: #DC2626;
+  --color-danger-700: #B91C1C;
+  --color-danger-800: #991B1B;
+  --color-danger-900: #7F1D1D;
+  --color-danger-950: #450A0A;
+  --bad: #B0201C;
+  --bad-bg: #F7E4E1;
+
+  /* Warning — ámbar (alertas no críticas) */
+  --color-warning-50: #FFFBEB;
+  --color-warning-100: #FEF3C7;
+  --color-warning-200: #FDE68A;
+  --color-warning-300: #FCD34D;
+  --color-warning-400: #FBBF24;
+  --color-warning-500: #F59E0B;
+  --color-warning-600: #D97706;
+  --color-warning-700: #B45309;
+  --color-warning-800: #92400E;
+  --color-warning-900: #78350F;
+  --color-warning-950: #451A03;
+  --warn: #A85F14;
+  --warn-bg: #F7EDDD;
+}

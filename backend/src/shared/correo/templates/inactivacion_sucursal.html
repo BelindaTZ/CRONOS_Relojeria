@@ -1,0 +1,14 @@
+{% extends "_layout.html" %}
+{% block titulo %}La sucursal {{ sucursal }} fue inactivada{% endblock %}
+{% block cuerpo %}
+<p style="margin:0 0 16px;">Hola {{ nombre }},</p>
+<p style="margin:0 0 16px;">Te informamos que la sucursal <strong>{{ sucursal }}</strong>, a la que estás asignado/a, ha sido inactivada en el sistema CRONOS.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 20px;background-color:#F5F2EA;border:1px solid #E0D7C3;border-radius:8px;">
+  <tr><td style="padding:14px 18px;font-family:'Hanken Grotesk',Georgia,'Segoe UI',sans-serif;font-size:14px;color:#22252B;">
+    <strong style="color:#8B909A;text-transform:uppercase;font-size:11px;letter-spacing:1px;">Motivo</strong><br />
+    {{ motivo }}
+  </td></tr>
+</table>
+<p style="margin:0 0 16px;">A partir de ahora no podrás registrar operaciones en esa sucursal. Si tienes tareas pendientes vinculadas a ella, contacta a Gerencia General.</p>
+<p style="margin:0;color:#8B909A;font-size:13px;">Fecha de la inactivación: {{ fecha }}</p>
+{% endblock %}

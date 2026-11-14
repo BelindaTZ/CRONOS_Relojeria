@@ -1,0 +1,121 @@
+openapi: 3.1.0
+info: { title: "CRONOS — Técnicos y Productividad (005)", version: "0.1.0" }
+servers: [{ url: http://localhost:8000 }]
+security: [{ bearerAuth: [] }]
+paths:
+  /tecnicos:
+    get:
+      operationId: listTecnicos
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: especialidad, in: query, schema: { type: string } }
+        - { name: sucursal_id, in: query, schema: { type: integer } }
+      responses: { "200": { description: Página de técnicos (sueldo solo con permiso administrativo) } }
+    post: { operationId: createTecnico, responses: { "201": { description: Técnico creado } } }
+  /tecnicos/{id}:
+    get: { operationId: getTecnico, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { "200": { description: Ficha } } }
+    patch:
+      operationId: updateTecnico
+      description: Costo, especialidades y certificaciones solo Técnico Jefe / Gerencia General. El propio técnico no puede.
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { "200": { description: Actualizado }, "403": { description: Sin permiso / autoedición no permitida } }
+  /tecnicos/{id}/estado:
+    put:
+      operationId: setEstadoTecnico
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { estado: { type: string, enum: [activo, inactivo] } } } } } }
+      responses: { "200": { description: Estado actualizado }, "403": { description: Autoinactivación no permitida } }
+  /tecnicos/{id}/costo:
+    post:
+      operationId: setCostoTecnico
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody: { content: { application/json: { schema: { type: object, required: [sueldo_mensual, vigente_desde], properties: { sueldo_mensual: { type: number }, vigente_desde: { type: string, format: date } } } } } }
+      responses: { "201": { description: Esquema de costo registrado (historial); restringido a rol administrativo } }
+  /reglas-bono:
+    get: { operationId: listReglasBono, responses: { "200": { description: Reglas } } }
+    post:
+      operationId: createReglaBono
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nombre, periodicidad, componentes]
+              properties:
+                nombre: { type: string }
+                periodicidad: { type: string, enum: [mensual, trimestral] }
+                componentes:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      tipo: { type: string, enum: [monto_por_meta, porcentaje_margen, combinacion] }
+                      indicador: { type: string, enum: [ot_completadas, cumplimiento_tiempos, margen_generado, calidad] }
+                      umbral: { type: number }
+                      valor: { type: number }
+      responses: { "201": { description: Regla vigente y auditada } }
+  /periodos-liquidacion:
+    post: { operationId: createPeriodo, responses: { "201": { description: Periodo abierto } } }
+  /periodos-liquidacion/{id}/cerrar:
+    post: { operationId: cerrarPeriodo, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { "200": { description: Periodo cerrado; bonos definitivos } } }
+  /bonos/calcular:
+    post:
+      operationId: calcularBono
+      requestBody: { content: { application/json: { schema: { type: object, required: [periodo_id], properties: { periodo_id: { type: integer }, tecnico_id: { type: integer, nullable: true } } } } } }
+      responses:
+        "200":
+          description: Bono(s) calculado(s)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    tecnico_id: { type: integer }
+                    valor_total: { type: number, minimum: 0 }
+                    desglose: { type: object }
+                    bono_ot: { type: array, items: { type: object, properties: { orden_trabajo_id: { type: integer }, monto: { type: number } } } }
+  /bonos:
+    get:
+      operationId: listBonos
+      parameters:
+        - { name: periodo_id, in: query, schema: { type: integer } }
+        - { name: tecnico_id, in: query, schema: { type: integer } }
+      responses: { "200": { description: Bonos acumulados } }
+  /productividad:
+    get:
+      operationId: getProductividad
+      parameters: [{ name: periodo_id, in: query, schema: { type: integer } }, { name: tecnico_id, in: query, schema: { type: integer } }]
+      responses:
+        "200":
+          description: Vista operativa por técnico
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    tecnico_id: { type: integer }
+                    ot_completadas: { type: integer }
+                    tiempo_promedio_horas: { type: number }
+                    margen_generado: { type: number }
+                    bono_alcanzado: { type: number }
+  /_internal/costeo/costo-mo-ot:
+    post:
+      operationId: costoManoObraOt
+      description: Contrato interno consumido por 008.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tecnico_id]
+              properties:
+                tecnico_id: { type: integer }
+                horas: { type: number, nullable: true }
+                tipo_reparacion: { type: string, nullable: true }
+      responses: { "200": { description: "{ costo_mo, tarifa_hora, base: horas|tiempo_estimado }" } }
+components:
+  securitySchemes: { bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT } }

@@ -1,0 +1,11 @@
+Estimado/a {{ cliente_nombre }},
+
+Adjuntamos la factura de su compra en CRONOS Relojería.
+
+Factura N.º {{ numero_factura }}
+Total: {{ total }}
+{% if url_factura %}Descargar PDF: {{ url_factura }}{% endif %}
+
+Conserve este documento junto con el certificado de autenticidad y garantía de su reloj.
+
+Gracias por su confianza.

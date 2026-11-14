@@ -1,0 +1,84 @@
+openapi: 3.1.0
+info: { title: "CRONOS — Dashboards y Reportes (013)", version: "0.1.0" }
+servers: [{ url: http://localhost:8000 }]
+security: [{ bearerAuth: [] }]
+paths:
+  /panel:
+    get:
+      operationId: getPanelGerencia
+      description: 5–6 KPIs críticos del periodo (§4.11.3). Solo Gerencia General. Scope por sucursal.
+      parameters: [{ name: periodo, in: query, required: true, schema: { type: string, example: "2026-09" } }, { name: sucursal_id, in: query, schema: { type: integer } }]
+      responses:
+        "200":
+          description: KPIs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  disponible: { type: boolean }
+                  frescura: { type: object }
+                  kpis:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        clave: { type: string }
+                        titulo: { type: string }
+                        valor: { type: number }
+                        unidad: { type: string }
+                        tendencia: { type: object, properties: { valor: { type: number }, direccion: { type: string, enum: [sube, baja, estable] } } }
+                        drill_down: { type: object, properties: { tipo: { type: string, enum: [navegar, abrir_flujo] }, ruta: { type: string }, filtros: { type: object } } }
+  /reportes/indice:
+    get:
+      operationId: getIndiceReportes
+      description: Reportes operativos de §4.11.1 (enlaces a sus módulos) filtrados por permisos.
+      responses: { "200": { description: Lista de reportes simples con ruta y módulo } }
+  /reportes/{slug}:
+    get:
+      operationId: getReporteAnalitico
+      description: Reporte de §4.11.2 desde ClickHouse (012). Filtros reactivos. Solo gerencia/administración.
+      parameters:
+        - { name: slug, in: path, required: true, schema: { type: string, example: "margen-por-marca" } }
+        - { name: periodo, in: query, schema: { type: string } }
+        - { name: sucursal_id, in: query, schema: { type: integer } }
+        - { name: marca, in: query, schema: { type: string } }
+        - { name: tecnico_id, in: query, schema: { type: integer } }
+      responses:
+        "200":
+          description: Datos del reporte (o estado degradado)
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      slug: { type: string }
+                      titulo: { type: string }
+                      tipo_grafico: { type: string, enum: [barras, pastel, lineas, kpi, tabla] }
+                      filtros_aplicados: { type: object }
+                      categorias: { type: array, items: { type: string } }
+                      series: { type: array, items: { type: object } }
+                      filas: { type: array, items: { type: object } }
+                      total_filas: { type: integer }
+                      frescura: { type: object }
+                      disponible: { type: boolean }
+                  - type: object
+                    properties:
+                      disponible: { const: false }
+                      motivo: { type: string }
+                      frescura: { type: object }
+        "404": { description: slug desconocido }
+  /reportes/{slug}/exportar:
+    get:
+      operationId: exportarReporte
+      parameters:
+        - { name: slug, in: path, required: true, schema: { type: string } }
+        - { name: formato, in: query, required: true, schema: { type: string, enum: [csv, xlsx, pdf] } }
+        - { name: periodo, in: query, schema: { type: string } }
+        - { name: sucursal_id, in: query, schema: { type: integer } }
+      responses:
+        "200": { description: Archivo (CSV/XLSX/PDF) }
+        "422": { description: "Formato distinto de csv para un reporte con > 5 000 filas" }
+components:
+  securitySchemes: { bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT } }

@@ -1,0 +1,58 @@
+openapi: 3.1.0
+info: { title: "CRONOS — Piezas y Repuestos (003)", version: "0.1.0" }
+servers: [{ url: http://localhost:8000 }]
+security: [{ bearerAuth: [] }]
+paths:
+  /piezas:
+    get:
+      operationId: listPiezas
+      description: Búsqueda multi-criterio (código, descripción, calibre, proveedor). Paginado.
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: calibre, in: query, schema: { type: string } }
+        - { name: bajo_minimo, in: query, schema: { type: boolean } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+      responses: { "200": { description: Página de piezas con stock por sucursal } }
+    post:
+      operationId: createPieza
+      responses: { "201": { description: Pieza creada }, "409": { description: código duplicado } }
+  /piezas/{id}:
+    get: { operationId: getPieza, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { "200": { description: Ficha + stock + lotes + historial de uso } } }
+    patch: { operationId: updatePieza, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { "200": { description: Actualizada } } }
+  /piezas/{id}/movimientos:
+    get:
+      operationId: listMovimientosPieza
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { "200": { description: Movimientos append-only } }
+    post:
+      operationId: registrarMovimientoPieza
+      description: >
+        Ingreso / consumo / ajuste / merma. Un consumo que dejaría stock < 0 devuelve 409.
+        Pieza perecedera en un ingreso exige lote y fecha_caducidad. Consumo aplica FEFO.
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sucursal_id, tipo, cantidad]
+              properties:
+                sucursal_id: { type: integer }
+                tipo: { type: string, enum: [ingreso, consumo_ot, venta_suelta, ajuste, merma, transferencia_salida, transferencia_entrada] }
+                cantidad: { type: integer, description: "positivo o negativo según el tipo" }
+                lote: { type: string, nullable: true }
+                fecha_caducidad: { type: string, format: date, nullable: true }
+                documento_tipo: { type: string, nullable: true }
+                documento_id: { type: integer, nullable: true }
+      responses:
+        "201": { description: Movimiento registrado; stock actualizado }
+        "409": { description: Stock insuficiente (nunca negativo) }
+        "422": { description: Pieza perecedera sin lote/fecha_caducidad }
+  /piezas/{id}/lotes:
+    get:
+      operationId: listLotesPieza
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { "200": { description: Lotes con estado (vigente/proximo_vencer/vencido) } }
+components:
+  securitySchemes: { bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT } }

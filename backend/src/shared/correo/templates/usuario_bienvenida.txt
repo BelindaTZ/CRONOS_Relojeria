@@ -1,0 +1,10 @@
+CRONOS — Tu acceso al sistema
+
+Hola {{ nombre }},
+
+Se creó tu cuenta en CRONOS. Contraseña temporal:
+
+    {{ password_temporal }}
+
+Inicia sesión en {{ app_base_url }}/login. En el primer acceso el sistema te
+pedirá fijar una contraseña definitiva.

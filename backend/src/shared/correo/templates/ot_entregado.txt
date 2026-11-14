@@ -1,0 +1,8 @@
+Estimado/a {{ cliente_nombre }},
+
+Le confirmamos que retiró su reloj de la orden {{ ot_numero }}. Gracias por confiar en nuestro taller.
+
+{% if reloj_marca %}{{ reloj_marca }} {{ reloj_referencia }}{% endif %}
+{% if precio_cobrado %}Total cobrado: ${{ precio_cobrado }}{% endif %}
+
+Cualquier consulta sobre la garantía del servicio, escríbanos a {{ contacto_email }}.

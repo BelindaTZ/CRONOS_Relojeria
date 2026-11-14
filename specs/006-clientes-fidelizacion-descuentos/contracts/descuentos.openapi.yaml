@@ -1,0 +1,93 @@
+openapi: 3.1.0
+info:
+  title: "CRONOS — Descuentos, Cupones y Margen Mínimo (006)"
+  version: "0.1.0"
+  description: >
+    Gestión de descuentos/cupones y el servicio compartido de aplicación con
+    margen mínimo protegido. El endpoint /_internal/descuentos/aplicar lo consumen
+    008 (orden de trabajo) y 009 (venta). Todo cálculo es de backend (Const. Ppio V).
+servers: [{ url: http://localhost:8000 }]
+security: [{ bearerAuth: [] }]
+paths:
+  /descuentos:
+    get: { operationId: listDescuentos, responses: { "200": { description: Descuentos generales } } }
+    post: { operationId: createDescuento, responses: { "201": { description: Descuento creado } } }
+  /descuentos/{id}:
+    patch: { operationId: updateDescuento, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { "200": { description: Actualizado } } }
+  /cupones:
+    get:
+      operationId: listCupones
+      parameters: [{ name: cliente_id, in: query, schema: { type: integer } }, { name: estado, in: query, schema: { type: string } }]
+      responses: { "200": { description: Cupones } }
+    post: { operationId: createCupon, responses: { "201": { description: Cupón emitido }, "409": { description: código duplicado } } }
+  /margen-minimo:
+    get:
+      operationId: getMargenMinimo
+      parameters: [{ name: ambito, in: query, schema: { type: string, enum: [global, marca, producto] } }, { name: ref, in: query, schema: { type: string } }]
+      responses: { "200": { description: "{ tipo: porcentaje_costo|monto, valor }" } }
+    put:
+      operationId: setMargenMinimo
+      description: Solo Gerencia General. Auditado. Dispara recálculo en cascada de operaciones abiertas.
+      responses: { "200": { description: Actualizado } }
+  /_internal/descuentos/aplicar:
+    post:
+      operationId: aplicarDescuento
+      description: >
+        Calcula precio final y margen tras aplicar UN descuento O UN cupón (no ambos).
+        Devuelve la decisión frente al margen mínimo.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [item_ref, costo, precio_lista]
+              properties:
+                item_ref: { type: string }
+                marca: { type: string, nullable: true }
+                costo: { type: number }
+                precio_lista: { type: number }
+                cliente_id: { type: integer, nullable: true }
+                descuento: { type: object, nullable: true }
+                cupon: { type: object, nullable: true }
+      responses:
+        "200":
+          description: Resultado de la aplicación
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  precio_final: { type: number }
+                  monto_descontado: { type: number }
+                  margen_resultante: { type: number }
+                  decision: { type: string, enum: [permitir, bloquear, requiere_autorizacion] }
+                  margen_minimo_aplicado: { type: object }
+        "422": { description: Se enviaron descuento y cupón a la vez (mutuamente excluyentes) }
+  /_internal/descuentos/autorizar:
+    post:
+      operationId: autorizarMargenMinimo
+      description: Gerencia General autoriza una operación bajo el margen mínimo. Registrado y auditado.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [documento_tipo, documento_id, motivo]
+              properties:
+                documento_tipo: { type: string, enum: [venta, orden_trabajo] }
+                documento_id: { type: integer }
+                motivo: { type: string }
+      responses:
+        "201": { description: Autorización registrada }
+        "403": { description: Solo Gerencia General }
+  /_internal/cupones/consumir:
+    post:
+      operationId: consumirCupon
+      description: Consumo con lock. Un cupón de uso único no se consume dos veces.
+      requestBody: { content: { application/json: { schema: { type: object, required: [codigo, documento_tipo, documento_id], properties: { codigo: { type: string }, documento_tipo: { type: string }, documento_id: { type: integer } } } } } }
+      responses:
+        "200": { description: Cupón consumido }
+        "409": { description: Cupón ya usado / vencido / límite alcanzado }
+components:
+  securitySchemes: { bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT } }

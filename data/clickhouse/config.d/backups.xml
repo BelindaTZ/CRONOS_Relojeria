@@ -1,0 +1,18 @@
+<!-- Disco de respaldo local para `BACKUP DATABASE ... TO Disk('backups', ...)`
+     (Spec §FR-015, research D9, data/scripts/backup_warehouse.sh). Dev-only:
+     backups quedan dentro del propio volumen `clickhouse_data`; para
+     producción se apuntaría este disco a S3/MinIO. -->
+<clickhouse>
+  <storage_configuration>
+    <disks>
+      <backups>
+        <type>local</type>
+        <path>/var/lib/clickhouse/backups/</path>
+      </backups>
+    </disks>
+  </storage_configuration>
+  <backups>
+    <allowed_disk>backups</allowed_disk>
+    <allowed_path>/var/lib/clickhouse/backups/</allowed_path>
+  </backups>
+</clickhouse>

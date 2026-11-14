@@ -1,0 +1,9 @@
+Estimado/a {{ cliente_nombre }},
+
+Su reloj de la orden {{ ot_numero }} ya está óptimo y listo para que pase a retirarlo.
+
+{{ sucursal_nombre }}
+{% if sucursal_direccion %}{{ sucursal_direccion }}{% endif %}
+Horario de atención: {{ horario }}
+
+Recuerde que el servicio se cobra al momento del retiro, según el método de pago que elija.

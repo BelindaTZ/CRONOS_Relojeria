@@ -1,0 +1,62 @@
+openapi: 3.1.0
+info:
+  title: CRONOS — Health (000-bootstrap-infraestructura)
+  version: 0.1.0
+  description: >
+    Único contrato de la feature de bootstrap. El backend expone solo API REST/JSON
+    (Constitución, Principio V). La documentación OpenAPI completa se sirve en /docs.
+servers:
+  - url: http://localhost:8000
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Estado de salud del backend y sus dependencias críticas
+      security: []            # público, sin autenticación
+      responses:
+        "200":
+          description: Backend y dependencias operativas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+              examples:
+                ok:
+                  value: { status: "ok", db: "up", storage: "up", version: "0.1.0" }
+        "503":
+          description: Alguna dependencia crítica no responde
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+              examples:
+                dbDown:
+                  value: { status: "degraded", db: "down", storage: "up", version: "0.1.0" }
+  /openapi.json:
+    get:
+      operationId: getOpenApi
+      summary: Documento OpenAPI del backend
+      security: []
+      responses:
+        "200":
+          description: Documento OpenAPI 3.1
+          content:
+            application/json:
+              schema: { type: object }
+components:
+  schemas:
+    Health:
+      type: object
+      required: [status, db, storage]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        db:
+          type: string
+          enum: [up, down]
+        storage:
+          type: string
+          enum: [up, down]
+        version:
+          type: string

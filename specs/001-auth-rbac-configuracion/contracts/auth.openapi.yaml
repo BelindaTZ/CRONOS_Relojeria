@@ -1,0 +1,107 @@
+openapi: 3.1.0
+info:
+  title: CRONOS — Auth y Perfil (001)
+  version: 0.1.0
+servers: [{ url: http://localhost:8000 }]
+paths:
+  /auth/login:
+    post:
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [identificacion, password]
+              properties:
+                identificacion: { type: string }
+                password: { type: string }
+      responses:
+        "200":
+          description: Token emitido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token: { type: string }
+                  refresh_token: { type: string }
+                  must_change_password: { type: boolean }
+        "401": { description: Credenciales inválidas o contraseña temporal caducada/usada }
+        "429": { description: Demasiados intentos }
+  /auth/refresh:
+    post:
+      operationId: refresh
+      security: []
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [refresh_token], properties: { refresh_token: { type: string } } } } }
+      responses:
+        "200": { description: Nuevo access_token }
+        "401": { description: Refresh inválido o revocado }
+  /auth/logout:
+    post:
+      operationId: logout
+      responses: { "204": { description: Sesión cerrada (refresh revocado) } }
+  /auth/cambiar-contrasena:
+    post:
+      operationId: cambiarContrasena
+      description: Requiere conocer la contraseña actual. Único endpoint permitido cuando must_change_password=true.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [actual, nueva]
+              properties: { actual: { type: string }, nueva: { type: string } }
+      responses:
+        "204": { description: Contraseña actualizada }
+        "400": { description: Contraseña actual incorrecta o nueva inválida }
+  /auth/olvide-contrasena:
+    post:
+      operationId: olvideContrasena
+      security: []
+      description: Genera contraseña temporal de un solo uso y la envía al email registrado. Respuesta siempre 202 (no revela si el usuario existe).
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [identificacion], properties: { identificacion: { type: string } } } } }
+      responses:
+        "202": { description: Si el usuario existe, se envió el correo }
+        "429": { description: Demasiadas solicitudes }
+  /perfil:
+    get:
+      operationId: getPerfil
+      responses:
+        "200":
+          description: Datos del usuario autenticado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  identificacion: { type: string, readOnly: true }
+                  nombre: { type: string, readOnly: true }
+                  roles: { type: array, items: { type: string }, readOnly: true }
+                  sucursales: { type: array, items: { type: string }, readOnly: true }
+                  email: { type: string }
+                  foto_perfil_url: { type: string, nullable: true }
+    patch:
+      operationId: updatePerfil
+      description: Solo email y foto de perfil. Otros campos se ignoran.
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                email: { type: string }
+                foto: { type: string, format: binary }
+      responses:
+        "200": { description: Perfil actualizado (auditado) }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+security: [{ bearerAuth: [] }]

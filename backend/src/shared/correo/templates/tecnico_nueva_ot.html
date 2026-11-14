@@ -1,0 +1,15 @@
+{% extends "_layout.html" %}
+{% block titulo %}Nueva orden de trabajo asignada{% endblock %}
+{% block cuerpo %}
+<p style="margin:0 0 16px;">Hola {{ tecnico_nombre }},</p>
+<p style="margin:0 0 16px;">Se te asignó una nueva orden de trabajo. Puedes ver el detalle completo en tu portal (Taller → Órdenes de trabajo).</p>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 20px;background-color:#F5F2EA;border:1px solid #E0D7C3;border-radius:8px;">
+  <tr><td style="padding:14px 18px;font-family:'Hanken Grotesk',Georgia,'Segoe UI',sans-serif;font-size:14px;color:#22252B;">
+    <strong style="color:#8B909A;text-transform:uppercase;font-size:11px;letter-spacing:1px;">Orden {{ ot_numero }}</strong><br />
+    Reloj: {{ reloj_marca }} {{ reloj_referencia }} · N.º de serie {{ reloj_serie }}<br />
+    Cliente: {{ cliente_nombre }}<br />
+    Motivo: {{ motivo }}
+  </td></tr>
+</table>
+<p style="margin:0;color:#8B909A;font-size:13px;">El vendedor que la registró queda como punto de contacto con el cliente durante el proceso.</p>
+{% endblock %}

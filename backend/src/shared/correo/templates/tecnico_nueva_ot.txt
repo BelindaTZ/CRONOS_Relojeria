@@ -1,0 +1,10 @@
+Hola {{ tecnico_nombre }},
+
+Se te asignó una nueva orden de trabajo. Puedes verla completa en tu portal (Taller → Órdenes de trabajo).
+
+Orden {{ ot_numero }}
+Reloj: {{ reloj_marca }} {{ reloj_referencia }} · N.º de serie {{ reloj_serie }}
+Cliente: {{ cliente_nombre }}
+Motivo: {{ motivo }}
+
+El vendedor que la registró queda como punto de contacto con el cliente durante el proceso.

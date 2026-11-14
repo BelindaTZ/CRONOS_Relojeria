@@ -1,0 +1,9 @@
+Estimado/a {{ cliente_nombre }},
+
+Como parte de nuestro programa de fidelización, le hemos asignado un cupón.
+
+Código: {{ codigo }}
+{{ descripcion }}
+Válido hasta {{ vigencia_fin }}
+
+Preséntelo en su próxima visita a la tienda.

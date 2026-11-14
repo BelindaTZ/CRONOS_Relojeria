@@ -1,0 +1,102 @@
+openapi: 3.1.0
+info: { title: "CRONOS — Citas (007)", version: "0.1.0" }
+servers: [{ url: http://localhost:8000 }]
+security: [{ bearerAuth: [] }]
+paths:
+  /citas:
+    get:
+      operationId: listCitas
+      parameters:
+        - { name: estado, in: query, schema: { type: string, enum: [pendiente, confirmada, cancelada, atendida] } }
+        - { name: canal_cita_id, in: query, schema: { type: integer } }
+        - { name: sucursal_id, in: query, schema: { type: integer } }
+        - { name: cliente_id, in: query, schema: { type: integer } }
+        - { name: desde, in: query, schema: { type: string, format: date } }
+        - { name: hasta, in: query, schema: { type: string, format: date } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+      responses: { "200": { description: Página de citas (scope por sucursal) } }
+    post:
+      operationId: createCita
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cliente_id, sucursal_id, canal_cita_id, motivo, fecha_preferida]
+              properties:
+                cliente_id: { type: integer }
+                sucursal_id: { type: integer }
+                canal_cita_id: { type: integer }
+                motivo: { type: string, enum: [compra, servicio_tecnico, consulta] }
+                fecha_preferida: { type: string, format: date-time }
+                observaciones: { type: string }
+      responses:
+        "201": { description: Cita pendiente }
+        "422": { description: Cliente inexistente o canal fuera de catálogo }
+  /citas/{id}/confirmar:
+    post:
+      operationId: confirmarCita
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { fecha_confirmada: { type: string, format: date-time } } } } } }
+      responses:
+        "200":
+          description: Confirmada (posible advertencia de solape, sin bloqueo)
+          content: { application/json: { schema: { type: object, properties: { estado: { type: string }, warning: { type: string, nullable: true } } } } }
+  /citas/{id}/cancelar:
+    post:
+      operationId: cancelarCita
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [motivo], properties: { motivo: { type: string } } } } } }
+      responses:
+        "200": { description: Cancelada }
+        "409": { description: No se puede cancelar una cita atendida }
+  /citas/{id}/atender:
+    post:
+      operationId: atenderCita
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                venta_id: { type: integer, nullable: true }
+                orden_trabajo_id: { type: integer, nullable: true }
+      responses:
+        "200":
+          description: Atendida. Si no hay transacción vinculada, incluye la acción de creación con contexto.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  estado: { type: string }
+                  accion:
+                    type: object
+                    nullable: true
+                    properties:
+                      tipo: { type: string, enum: [crear_venta, crear_ot] }
+                      cliente_id: { type: integer }
+                      cita_id: { type: integer }
+  /agenda:
+    get:
+      operationId: getAgenda
+      parameters:
+        - { name: rango, in: query, required: true, schema: { type: string, enum: [dia, semana] } }
+        - { name: fecha, in: query, required: true, schema: { type: string, format: date } }
+        - { name: sucursal_id, in: query, schema: { type: integer } }
+      responses: { "200": { description: Citas ordenadas por hora; exportable } }
+  /citas/conversion:
+    get:
+      operationId: getConversionCitas
+      parameters: [{ name: desde, in: query, schema: { type: string, format: date } }, { name: hasta, in: query, schema: { type: string, format: date } }]
+      responses: { "200": { description: "{ atendidas, con_transaccion, tasa }" } }
+  /_internal/citas/confirmadas-pendientes-recordatorio:
+    get:
+      operationId: citasParaRecordatorio
+      description: Consumido por 014.
+      parameters: [{ name: antelacion, in: query, schema: { type: string, example: "24h" } }]
+      responses: { "200": { description: Citas confirmadas dentro de la ventana } }
+components:
+  securitySchemes: { bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT } }

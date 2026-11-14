@@ -1,0 +1,89 @@
+openapi: 3.1.0
+info:
+  title: CRONOS — Configuración, Catálogos y Auditoría (001)
+  version: 0.1.0
+servers: [{ url: http://localhost:8000 }]
+security: [{ bearerAuth: [] }]
+paths:
+  /catalogos/medio-pago:
+    get: { operationId: listMediosPago, responses: { "200": { description: efectivo, transferencia, cheque, tarjeta } } }
+  /catalogos/categoria-gasto:
+    get: { operationId: listCategoriasGasto, responses: { "200": { description: Categorías por tipo } } }
+    post: { operationId: createCategoriaGasto, responses: { "201": { description: Creada } } }
+  /catalogos/canal-cita:
+    get: { operationId: listCanalesCita, responses: { "200": { description: correo_electronico, presencial } } }
+    put: { operationId: setCanalesCita, responses: { "200": { description: Catálogo actualizado } } }
+  /parametros/{clave}:
+    get:
+      operationId: getParametro
+      parameters:
+        - { name: clave, in: path, required: true, schema: { type: string } }
+        - { name: ambito_tipo, in: query, schema: { type: string, enum: [global, sucursal, marca, producto, tipo_servicio] } }
+        - { name: ambito_ref, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Valor vigente + historial
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clave: { type: string }
+                  tipo: { type: string }
+                  valor_vigente: {}
+                  historial:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        valor: {}
+                        vigente_desde: { type: string, format: date-time }
+                        creado_por: { type: string }
+    put:
+      operationId: setParametro
+      description: >
+        Inserta un nuevo valor vigente (no destruye el historial). Dispara el recálculo
+        en cascada de los consumidores sobre entidades abiertas y registra auditoría.
+        Solo Gerencia General o delegado.
+      parameters: [{ name: clave, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [valor, ambito_tipo]
+              properties:
+                valor: {}
+                tipo: { type: string, enum: [numero, porcentaje, monto, json, texto] }
+                ambito_tipo: { type: string, enum: [global, sucursal, marca, producto, tipo_servicio] }
+                ambito_ref: { type: string, nullable: true }
+                vigente_desde: { type: string, format: date-time }
+      responses:
+        "200":
+          description: Valor guardado; incluye resumen del recálculo disparado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recalculo:
+                    type: object
+                    properties:
+                      consumidores: { type: array, items: { type: string } }
+                      entidades_abiertas_afectadas: { type: integer }
+                      documentos_emitidos_intactos: { type: integer }
+        "403": { description: Solo Gerencia General / delegado }
+  /auditoria:
+    get:
+      operationId: listAuditoria
+      parameters:
+        - { name: entidad, in: query, schema: { type: string } }
+        - { name: actor, in: query, schema: { type: string } }
+        - { name: desde, in: query, schema: { type: string, format: date-time } }
+        - { name: hasta, in: query, schema: { type: string, format: date-time } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+      responses: { "200": { description: Página de registros de auditoría; exportable } }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }

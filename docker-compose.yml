@@ -1,0 +1,280 @@
+# CRONOS — stack de desarrollo (feature 000: bootstrap de infraestructura)
+# Solo las features 000 y 012 tocan este archivo (Constitución, "Flujo de Trabajo").
+# 000 define: db, backend, frontend, minio (+ minio-init) y pgadmin (perfil "tools").
+# 012 (plataforma de datos ELT) añade: clickhouse, airflow-db, airflow-webserver,
+# airflow-scheduler (+ airflow-init) y el bucket landing-zone (landing-zone-init).
+# La app operativa (000-011) NO depende de estos servicios para funcionar (Ppio III/FR-011).
+
+name: cronos
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cronos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-cronos}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cronos} -d ${POSTGRES_DB:-cronos}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  minio:
+    image: minio/minio:RELEASE.2024-10-13T13-34-11Z
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-cronos}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-changeme}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "mc ready local || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  # Job idempotente: crea los 4 buckets de cara a la app y fija su política.
+  # NO crea landing-zone (feature 012). Re-arrancar el stack no falla.
+  minio-init:
+    image: minio/mc:RELEASE.2024-10-08T09-37-26Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-cronos}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-changeme}
+    entrypoint: >
+      /bin/sh -c "
+      set -e;
+      mc alias set local http://minio:9000 \"$$MINIO_ROOT_USER\" \"$$MINIO_ROOT_PASSWORD\";
+      for b in reloj-imagenes perfil-usuarios comprobantes-venta documentos; do
+        mc mb --ignore-existing local/$$b;
+      done;
+      mc anonymous set download local/reloj-imagenes;
+      mc anonymous set download local/perfil-usuarios;
+      mc anonymous set none local/comprobantes-venta;
+      mc anonymous set none local/documentos;
+      echo 'minio-init OK: buckets listos (landing-zone NO creado).';
+      "
+    restart: "no"
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://cronos:changeme@db:5432/cronos}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio:9000}
+      # feature 012: el backend NO depende de esto para arrancar (sin depends_on de
+      # clickhouse/airflow abajo) — solo los usa bajo demanda en /reportes/*, con
+      # degradación limpia si no responden (research D7, FR-011).
+      CLICKHOUSE_HOST: ${CLICKHOUSE_HOST:-clickhouse}
+      CLICKHOUSE_HTTP_PORT: ${CLICKHOUSE_HTTP_PORT:-8123}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-cronos}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-changeme}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-wh}
+      AIRFLOW_BASE_URL: ${AIRFLOW_BASE_URL:-http://airflow-webserver:8080}
+      AIRFLOW_ADMIN_USER: ${AIRFLOW_ADMIN_USER:-admin}
+      AIRFLOW_ADMIN_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD:-changeme}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    depends_on:
+      - backend
+
+  # ---------------------------------------------------------------- feature 012 (ELT)
+  # Bucket landing-zone: raw del Extract, NUNCA fuente de negocio (Ppio III). Job
+  # aparte de minio-init de 000 para no tocar ese job (Const. "Flujo de Trabajo").
+  landing-zone-init:
+    image: minio/mc:RELEASE.2024-10-08T09-37-26Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-cronos}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-changeme}
+    entrypoint: >
+      /bin/sh -c "
+      set -e;
+      mc alias set local http://minio:9000 \"$$MINIO_ROOT_USER\" \"$$MINIO_ROOT_PASSWORD\";
+      mc mb --ignore-existing local/${LANDING_ZONE_BUCKET:-landing-zone};
+      mc anonymous set none local/${LANDING_ZONE_BUCKET:-landing-zone};
+      echo 'landing-zone-init OK (feature 012): landing-zone listo.';
+      "
+    restart: "no"
+
+  # Warehouse analítico (§4.11.2). Nunca consultado por la app operativa al arrancar
+  # ni en su health-check (research D7) — solo lo consulta 013 y el propio pipeline.
+  clickhouse:
+    build:
+      context: ./data
+      dockerfile: clickhouse/Dockerfile
+    restart: unless-stopped
+    environment:
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-cronos}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-changeme}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-wh}
+    ports:
+      - "${CLICKHOUSE_HTTP_PORT:-8123}:8123"
+      - "${CLICKHOUSE_NATIVE_PORT:-9100}:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 -O- http://localhost:8123/ping || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  # DB de metadata de Airflow: instancia PostgreSQL SEPARADA de la operativa
+  # (research D1) — ni comparte contenedor ni base de datos con `db`.
+  airflow-db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${AIRFLOW_DB_USER:-airflow}
+      POSTGRES_PASSWORD: ${AIRFLOW_DB_PASSWORD:-changeme}
+      POSTGRES_DB: ${AIRFLOW_DB_NAME:-airflow}
+    volumes:
+      - airflow_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AIRFLOW_DB_USER:-airflow} -d ${AIRFLOW_DB_NAME:-airflow}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  # Imagen propia (data/Dockerfile): Airflow oficial + los DAGs/lib/warehouse de esta
+  # feature ya copiados dentro (Docker sin bind mounts — Const./convención del proyecto).
+  airflow-init:
+    build: ./data
+    depends_on:
+      airflow-db:
+        condition: service_healthy
+      landing-zone-init:
+        condition: service_completed_successfully
+    env_file: .env
+    environment: &airflow-env
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER:-airflow}:${AIRFLOW_DB_PASSWORD:-changeme}@airflow-db:5432/${AIRFLOW_DB_NAME:-airflow}
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:-}
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_WEBSERVER_SECRET_KEY:-dev-only-change-me}
+      AIRFLOW__API__AUTH_BACKENDS: airflow.api.auth.backend.basic_auth
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
+      ELT_PG_HOST: db
+      ELT_PG_PORT: "5432"
+      ELT_PG_DB: ${POSTGRES_DB:-cronos}
+      ELT_PG_USER: ${ELT_PG_RO_USER:-cronos_elt_ro}
+      ELT_PG_PASSWORD: ${ELT_PG_RO_PASSWORD:-changeme}
+      ELT_CLICKHOUSE_HOST: clickhouse
+      ELT_CLICKHOUSE_PORT: "8123"
+      ELT_CLICKHOUSE_USER: ${CLICKHOUSE_USER:-cronos}
+      ELT_CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-changeme}
+      ELT_CLICKHOUSE_DB: ${CLICKHOUSE_DB:-wh}
+      ELT_MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio:9000}
+      ELT_MINIO_USER: ${MINIO_ROOT_USER:-cronos}
+      ELT_MINIO_PASSWORD: ${MINIO_ROOT_PASSWORD:-changeme}
+      ELT_MINIO_SECURE: "false"
+      ELT_LANDING_ZONE_BUCKET: ${LANDING_ZONE_BUCKET:-landing-zone}
+      ELT_FRECUENCIA: ${ELT_FRECUENCIA:-@hourly}
+    entrypoint: >
+      /bin/bash -c "
+      airflow db migrate &&
+      (airflow users create --username ${AIRFLOW_ADMIN_USER:-admin} --password ${AIRFLOW_ADMIN_PASSWORD:-changeme} --firstname Cronos --lastname Admin --role Admin --email ${AIRFLOW_ADMIN_EMAIL:-admin@cronos.local} || true) &&
+      airflow variables set elt_frecuencia \"${ELT_FRECUENCIA:-@hourly}\"
+      "
+    restart: "no"
+
+  airflow-webserver:
+    build: ./data
+    restart: unless-stopped
+    depends_on:
+      airflow-db:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    env_file: .env
+    environment: *airflow-env
+    ports:
+      - "${AIRFLOW_WEB_PORT:-8180}:8080"
+    command: webserver
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 12
+      start_period: 40s
+
+  airflow-scheduler:
+    build: ./data
+    restart: unless-stopped
+    depends_on:
+      airflow-db:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    env_file: .env
+    environment: *airflow-env
+    command: scheduler
+    healthcheck:
+      test: ["CMD-SHELL", "airflow jobs check --job-type SchedulerJob --hostname \"$$(hostname)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 6
+      start_period: 40s
+
+  # Opcional — solo `docker compose --profile tools up`.
+  pgadmin:
+    image: dpage/pgadmin4:8
+    profiles: ["tools"]
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@cronos.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-changeme}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - db
+
+volumes:
+  db_data:
+  minio_data:
+  pgadmin_data:
+  clickhouse_data:
+  airflow_db_data:

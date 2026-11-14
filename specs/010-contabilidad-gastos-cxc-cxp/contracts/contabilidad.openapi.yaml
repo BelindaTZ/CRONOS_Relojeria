@@ -1,0 +1,128 @@
+openapi: 3.1.0
+info: { title: "CRONOS — Contabilidad (010)", version: "0.1.0" }
+servers: [{ url: http://localhost:8000 }]
+security: [{ bearerAuth: [] }]
+paths:
+  /plan-cuentas:
+    get: { operationId: getPlanCuentas, responses: { "200": { description: Plan jerárquico } } }
+    post: { operationId: createCuenta, responses: { "201": { description: Cuenta creada } } }
+  /asientos:
+    get:
+      operationId: listAsientos
+      parameters: [{ name: origen, in: query, schema: { type: string } }, { name: periodo, in: query, schema: { type: string } }, { name: page, in: query, schema: { type: integer, default: 1 } }]
+      responses: { "200": { description: Página de asientos } }
+    post:
+      operationId: createAsiento
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fecha, glosa, lineas]
+              properties:
+                fecha: { type: string, format: date }
+                glosa: { type: string }
+                ajuste_de_asiento_id: { type: integer, nullable: true }
+                lineas:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      cuenta: { type: string }
+                      debe: { type: number, default: 0 }
+                      haber: { type: number, default: 0 }
+      responses:
+        "201": { description: Asiento registrado }
+        "422": { description: "Σ debe ≠ Σ haber, o periodo cerrado sin asiento de ajuste" }
+  /mayor:
+    get: { operationId: getMayor, parameters: [{ name: cuenta, in: query, required: true, schema: { type: string } }, { name: periodo, in: query, schema: { type: string } }], responses: { "200": { description: Movimientos y saldo } } }
+  /balance:
+    get: { operationId: getBalanceComprobacion, parameters: [{ name: periodo, in: query, required: true, schema: { type: string } }], responses: { "200": { description: "Σ debe / Σ haber por cuenta (total debe = total haber)" } } }
+  /estado-resultados:
+    get: { operationId: getEstadoResultados, parameters: [{ name: periodo, in: query, required: true, schema: { type: string } }, { name: sucursal_id, in: query, schema: { type: integer } }], responses: { "200": { description: Ingresos − costos − gastos } } }
+  /caja/{sucursal_id}/sesiones:
+    post: { operationId: abrirSesionCaja, parameters: [{ name: sucursal_id, in: path, required: true, schema: { type: integer } }], responses: { "201": { description: Sesión abierta } } }
+  /caja/{sucursal_id}/sesiones/actual/cerrar:
+    post:
+      operationId: cerrarSesionCaja
+      parameters: [{ name: sucursal_id, in: path, required: true, schema: { type: integer } }]
+      requestBody: { content: { application/json: { schema: { type: object, required: [efectivo_contado], properties: { efectivo_contado: { type: number } } } } } }
+      responses: { "200": { description: "Cerrada; registra diferencia" }, "409": { description: "Ya cerrada" } }
+  /caja/{sucursal_id}/movimientos:
+    post: { operationId: registrarMovimientoCaja, parameters: [{ name: sucursal_id, in: path, required: true, schema: { type: integer } }], responses: { "201": { description: Movimiento registrado }, "409": { description: "Sesión cerrada para esa fecha" } } }
+  /cheques:
+    get: { operationId: listCheques, parameters: [{ name: tipo, in: query, schema: { type: string } }, { name: estado, in: query, schema: { type: string } }], responses: { "200": { description: Cheques } } }
+  /cheques/{id}/protestar:
+    post: { operationId: protestarCheque, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { "200": { description: "Cobro revertido; CxC reactivada" } } }
+  /cxc:
+    get: { operationId: listCxc, parameters: [{ name: cliente_id, in: query, schema: { type: integer } }, { name: estado, in: query, schema: { type: string } }], responses: { "200": { description: Subledger de CxC } } }
+  /cxc/{id}/cobros:
+    post: { operationId: registrarCobroCxc, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { "201": { description: Cobro registrado; saldo actualizado } } }
+  /cxc/aging:
+    get: { operationId: getAgingCxc, parameters: [{ name: fecha_corte, in: query, schema: { type: string, format: date } }], responses: { "200": { description: "Tramos 0-30/31-60/61-90/+90" } } }
+  /beneficiarios:
+    get: { operationId: listBeneficiarios, parameters: [{ name: q, in: query, schema: { type: string } }], responses: { "200": { description: Acreedores de servicios } } }
+    post: { operationId: createBeneficiario, responses: { "201": { description: Beneficiario creado } } }
+  /cxp:
+    get:
+      operationId: listCxp
+      parameters:
+        - { name: proveedor_id, in: query, schema: { type: integer } }
+        - { name: beneficiario_id, in: query, schema: { type: integer } }
+        - { name: origen_tipo, in: query, schema: { type: string, enum: [orden_compra, gasto] } }
+        - { name: estado, in: query, schema: { type: string } }
+      responses: { "200": { description: "Subledger de CxP (de compras 002 y de gastos por pagar)" } }
+  /cxp/{id}/pagos:
+    post: { operationId: registrarPagoCxp, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { "201": { description: Pago registrado (retención opcional); solo Gerencia General } } }
+  /cxp/aging:
+    get: { operationId: getAgingCxp, parameters: [{ name: fecha_corte, in: query, schema: { type: string, format: date } }], responses: { "200": { description: Aging de CxP } } }
+  /gastos:
+    get:
+      operationId: listGastos
+      parameters:
+        - { name: sucursal_id, in: query, schema: { type: integer } }
+        - { name: categoria_gasto_id, in: query, schema: { type: integer } }
+        - { name: estado_pago, in: query, schema: { type: string, enum: [pagado, por_pagar] } }
+        - { name: estado, in: query, schema: { type: string, enum: [borrador, confirmado] } }
+        - { name: desde, in: query, schema: { type: string, format: date } }
+        - { name: hasta, in: query, schema: { type: string, format: date } }
+      responses: { "200": { description: Gastos (scope por sucursal) } }
+    post:
+      operationId: registrarGasto
+      description: >
+        Registro manual. Solo Gerencia General. `data` (JSON) incluye sucursal_id, categoria_gasto_id,
+        monto, fecha, descripcion, estado_pago (pagado|por_pagar), y medio_pago (si pagado) o
+        proveedor_id|beneficiario_id (si por_pagar).
+      requestBody: { content: { multipart/form-data: { schema: { type: object, properties: { data: { type: string }, soporte: { type: string, format: binary } } } } } }
+      responses:
+        "201": { description: "Gasto confirmado; asiento automático; CxP si estado_pago=por_pagar" }
+        "403": { description: "Solo Gerencia General" }
+        "422": { description: "Sin categoría, o por_pagar sin contraparte, o pagado sin medio de pago" }
+  /gastos/{id}/confirmar:
+    post:
+      operationId: confirmarGasto
+      description: Confirma un gasto en borrador generado por un gasto recurrente, ajustando monto y estado_pago.
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { monto: { type: number }, estado_pago: { type: string, enum: [pagado, por_pagar] }, medio_pago: { type: string } } } } } }
+      responses: { "200": { description: "Gasto confirmado; asiento y CxP según estado_pago" } }
+  /gastos-recurrentes:
+    get: { operationId: listGastosRecurrentes, responses: { "200": { description: Gastos recurrentes } } }
+    post: { operationId: createGastoRecurrente, responses: { "201": { description: "Recurrente creado (activo)" } } }
+  /gastos-recurrentes/{id}/estado:
+    put:
+      operationId: setEstadoGastoRecurrente
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { estado: { type: string, enum: [activo, pausado, cancelado] } } } } } }
+      responses: { "200": { description: Estado actualizado } }
+  /reglas-asiento:
+    get: { operationId: listReglasAsiento, responses: { "200": { description: Reglas de asiento automático } } }
+    put: { operationId: setReglasAsiento, responses: { "200": { description: Reglas actualizadas } } }
+  /rentabilidad-sucursal:
+    get: { operationId: getRentabilidadSucursal, parameters: [{ name: periodo, in: query, required: true, schema: { type: string } }, { name: sucursal_id, in: query, schema: { type: integer } }], responses: { "200": { description: "Ingresos − costos − gastos operativos por sucursal" } } }
+  /cxc-pendientes:
+    get: { operationId: getCxcPendientes, responses: { "200": { description: "Reporte operativo §4.11.1" } } }
+  /periodos/{periodo}/cerrar:
+    post: { operationId: cerrarPeriodoContable, parameters: [{ name: periodo, in: path, required: true, schema: { type: string } }], responses: { "200": { description: Periodo cerrado } } }
+components:
+  securitySchemes: { bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT } }

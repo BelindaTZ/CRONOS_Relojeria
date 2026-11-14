@@ -1,0 +1,83 @@
+openapi: 3.1.0
+info: { title: "CRONOS — Notificaciones Automatizadas por Email (014)", version: "0.1.0" }
+servers: [{ url: http://localhost:8000 }]
+security: [{ bearerAuth: [] }]
+paths:
+  /plantillas:
+    get: { operationId: listPlantillas, responses: { "200": { description: Plantillas por tipo } } }
+  /plantillas/{tipo}:
+    get: { operationId: getPlantilla, parameters: [{ name: tipo, in: path, required: true, schema: { type: string } }], responses: { "200": { description: Plantilla vigente + versiones } } }
+    put:
+      operationId: setPlantilla
+      description: Solo Gerencia General / delegado. Incrementa versión. Auditado.
+      parameters: [{ name: tipo, in: path, required: true, schema: { type: string } }]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { asunto: { type: string }, cuerpo: { type: string } } } } } }
+      responses: { "200": { description: Plantilla actualizada }, "403": { description: Sin permiso } }
+  /plantillas/{tipo}/preview:
+    post:
+      operationId: previewPlantilla
+      parameters: [{ name: tipo, in: path, required: true, schema: { type: string } }]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { contexto: { type: object } } } } } }
+      responses: { "200": { description: HTML renderizado con el layout de identidad visual } }
+  /envios:
+    get:
+      operationId: listEnvios
+      parameters:
+        - { name: tipo, in: query, schema: { type: string } }
+        - { name: estado, in: query, schema: { type: string, enum: [encolado, enviando, enviado, entregado, rebotado, fallido, sin_destinatario, cancelado] } }
+        - { name: cliente_id, in: query, schema: { type: integer } }
+        - { name: disparo_origen_id, in: query, schema: { type: integer } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+      responses: { "200": { description: Página de envíos con su estado } }
+  /envios/{id}/reintentar:
+    post:
+      operationId: reintentarEnvio
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "202": { description: Reencolado }
+        "409": { description: "Estado no reintentable (p. ej. entregado)" }
+  /preferencias/cliente/{cliente_id}:
+    get: { operationId: getPreferenciasCliente, parameters: [{ name: cliente_id, in: path, required: true, schema: { type: integer } }], responses: { "200": { description: Opt-in/out por tipo } } }
+    put:
+      operationId: setPreferenciaCliente
+      parameters: [{ name: cliente_id, in: path, required: true, schema: { type: integer } }]
+      requestBody: { content: { application/json: { schema: { type: object, required: [tipo_comunicacion, opt_in], properties: { tipo_comunicacion: { type: string }, opt_in: { type: boolean } } } } } }
+      responses: { "200": { description: Preferencia actualizada }, "422": { description: "Tipo crítico no admite opt-out" } }
+  /reportes/envios:
+    get:
+      operationId: getReporteEnvios
+      parameters: [{ name: desde, in: query, schema: { type: string, format: date } }, { name: hasta, in: query, schema: { type: string, format: date } }, { name: tipo, in: query, schema: { type: string } }]
+      responses: { "200": { description: "Envíos por tipo y estado (exportable, paginado)" } }
+  /webhooks/email:
+    post:
+      operationId: webhookEmail
+      description: Recibe eventos de entrega del proveedor (SendGrid). Sin autenticación de usuario; validación por firma del proveedor.
+      security: []
+      requestBody: { content: { application/json: { schema: { type: array, items: { type: object } } } } }
+      responses: { "204": { description: "Eventos procesados; estados de envío actualizados" } }
+  /_internal/notificaciones/encolar:
+    post:
+      operationId: encolarNotificacion
+      description: >
+        Invocado por 006/007/008 (y 001) al emitir un evento de dominio.
+        Idempotente por clave_idempotencia. Respeta opt-out. Nunca bloquea al llamante.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tipo, disparo_origen_tipo, disparo_origen_id, hito, contexto]
+              properties:
+                tipo: { type: string }
+                cliente_id: { type: integer, nullable: true }
+                usuario_id: { type: integer, nullable: true }
+                disparo_origen_tipo: { type: string }
+                disparo_origen_id: { type: integer }
+                hito: { type: string }
+                contexto: { type: object }
+                programar_para: { type: string, format: date-time, nullable: true }
+      responses:
+        "202": { description: "Envío encolado (o dedup / cancelado por opt-out / sin_destinatario)" }
+components:
+  securitySchemes: { bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT } }

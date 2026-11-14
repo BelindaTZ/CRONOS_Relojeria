@@ -1,0 +1,61 @@
+openapi: 3.1.0
+info: { title: "CRONOS — Lubricación (008)", version: "0.1.0" }
+servers: [{ url: http://localhost:8000 }]
+security: [{ bearerAuth: [] }]
+paths:
+  /productos-moebius:
+    get:
+      operationId: listProductosMoebius
+      responses: { "200": { description: "Catálogo (9010, 9104, HP-1300, 9415, 9501, 9504, 8200, 8217, 8513, 8516, …)" } }
+    post: { operationId: createProductoMoebius, responses: { "201": { description: Producto añadido; vinculado a la pieza-insumo en stock } } }
+  /calibres/{id}/ficha-lubricacion:
+    get:
+      operationId: getFichaLubricacion
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200":
+          description: Ficha con puntos y producto recomendado por punto
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  calibre_id: { type: integer }
+                  notas_generales: { type: string }
+                  puntos:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        nombre: { type: string }
+                        producto_recomendado: { type: string }
+                        notas: { type: string }
+        "404": { description: El calibre no tiene ficha aún }
+    put:
+      operationId: setFichaLubricacion
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notas_generales: { type: string }
+                puntos:
+                  type: array
+                  items:
+                    type: object
+                    required: [nombre, producto_moebius_codigo]
+                    properties:
+                      nombre: { type: string }
+                      producto_moebius_codigo: { type: string }
+                      notas: { type: string }
+      responses: { "200": { description: Ficha creada/actualizada } }
+  /reportes/desviacion-lubricacion:
+    get:
+      operationId: getDesviacionLubricacion
+      description: Versión operativa (recomendado vs. usado). El analítico agregado es 013.
+      parameters: [{ name: desde, in: query, schema: { type: string, format: date } }, { name: hasta, in: query, schema: { type: string, format: date } }]
+      responses: { "200": { description: Registros con desviación por OT / punto } }
+components:
+  securitySchemes: { bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT } }

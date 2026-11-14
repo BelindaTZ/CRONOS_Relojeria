@@ -1,0 +1,29 @@
+{
+  "_comment": "OT de prueba para el motor de bono de la feature 005 hasta que exista 008. tecnico_ref se mapea al id real del técnico en el test.",
+  "periodo": { "fecha_inicio": "2026-09-01", "fecha_fin": "2026-09-30" },
+  "ordenes": [
+    { "orden_trabajo_id": 1001, "tecnico_ref": "t1", "fecha_cierre": "2026-09-03", "margen_real": "50.00", "horas_registradas": 2, "tipo_reparacion": "servicio_completo", "dentro_de_tiempo": true, "es_reproceso": false },
+    { "orden_trabajo_id": 1002, "tecnico_ref": "t1", "fecha_cierre": "2026-09-03", "margen_real": "50.00", "horas_registradas": 2, "tipo_reparacion": "servicio_completo", "dentro_de_tiempo": true, "es_reproceso": false },
+    { "orden_trabajo_id": 1003, "tecnico_ref": "t1", "fecha_cierre": "2026-09-04", "margen_real": "50.00", "horas_registradas": 2, "tipo_reparacion": "servicio_completo", "dentro_de_tiempo": true, "es_reproceso": false },
+    { "orden_trabajo_id": 1004, "tecnico_ref": "t1", "fecha_cierre": "2026-09-05", "margen_real": "50.00", "horas_registradas": 2, "tipo_reparacion": "servicio_completo", "dentro_de_tiempo": true, "es_reproceso": false },
+    { "orden_trabajo_id": 1005, "tecnico_ref": "t1", "fecha_cierre": "2026-09-06", "margen_real": "50.00", "horas_registradas": 2, "tipo_reparacion": "servicio_completo", "dentro_de_tiempo": true, "es_reproceso": false },
+    { "orden_trabajo_id": 1006, "tecnico_ref": "t1", "fecha_cierre": "2026-09-07", "margen_real": "50.00", "horas_registradas": 2, "tipo_reparacion": "servicio_completo", "dentro_de_tiempo": true, "es_reproceso": false },
+    { "orden_trabajo_id": 1007, "tecnico_ref": "t1", "fecha_cierre": "2026-09-08", "margen_real": "50.00", "horas_registradas": 2, "tipo_reparacion": "servicio_completo", "dentro_de_tiempo": true, "es_reproceso": false },
+    { "orden_trabajo_id": 1008, "tecnico_ref": "t1", "fecha_cierre": "2026-09-09", "margen_real": "50.00", "horas_registradas": 2, "tipo_reparacion": "servicio_completo", "dentro_de_tiempo": true, "es_reproceso": false },
+    { "orden_trabajo_id": 1009, "tecnico_ref": "t1", "fecha_cierre": "2026-09-10", "margen_real": "50.00", "horas_registradas": 2, "tipo_reparacion": "servicio_completo", "dentro_de_tiempo": true, "es_reproceso": false },
+    { "orden_trabajo_id": 1010, "tecnico_ref": "t1", "fecha_cierre": "2026-09-11", "margen_real": "50.00", "horas_registradas": 2, "tipo_reparacion": "servicio_completo", "dentro_de_tiempo": true, "es_reproceso": false },
+    { "orden_trabajo_id": 1011, "tecnico_ref": "t1", "fecha_cierre": "2026-09-12", "margen_real": "50.00", "horas_registradas": 2, "tipo_reparacion": "servicio_completo", "dentro_de_tiempo": true, "es_reproceso": false },
+    { "orden_trabajo_id": 1012, "tecnico_ref": "t1", "fecha_cierre": "2026-09-13", "margen_real": "50.00", "horas_registradas": 2, "tipo_reparacion": "servicio_completo", "dentro_de_tiempo": true, "es_reproceso": false },
+    { "orden_trabajo_id": 1013, "tecnico_ref": "t1", "fecha_cierre": "2026-09-14", "margen_real": "50.00", "horas_registradas": 2, "tipo_reparacion": "servicio_completo", "dentro_de_tiempo": true, "es_reproceso": false },
+    { "orden_trabajo_id": 1014, "tecnico_ref": "t1", "fecha_cierre": "2026-09-15", "margen_real": "50.00", "horas_registradas": 2, "tipo_reparacion": "servicio_completo", "dentro_de_tiempo": true, "es_reproceso": false },
+    { "orden_trabajo_id": 1015, "tecnico_ref": "t1", "fecha_cierre": "2026-09-16", "margen_real": "50.00", "horas_registradas": 2, "tipo_reparacion": "servicio_completo", "dentro_de_tiempo": true, "es_reproceso": false },
+    { "orden_trabajo_id": 1016, "tecnico_ref": "t1", "fecha_cierre": "2026-09-17", "margen_real": "50.00", "horas_registradas": 2, "tipo_reparacion": "servicio_completo", "dentro_de_tiempo": true, "es_reproceso": false },
+    { "orden_trabajo_id": 1017, "tecnico_ref": "t1", "fecha_cierre": "2026-09-18", "margen_real": "50.00", "horas_registradas": 2, "tipo_reparacion": "servicio_completo", "dentro_de_tiempo": true, "es_reproceso": false },
+    { "orden_trabajo_id": 1018, "tecnico_ref": "t1", "fecha_cierre": "2026-09-19", "margen_real": "50.00", "horas_registradas": 2, "tipo_reparacion": "servicio_completo", "dentro_de_tiempo": true, "es_reproceso": false },
+    { "orden_trabajo_id": 1019, "tecnico_ref": "t1", "fecha_cierre": "2026-09-20", "margen_real": "50.00", "horas_registradas": 2, "tipo_reparacion": "servicio_completo", "dentro_de_tiempo": true, "es_reproceso": false },
+    { "orden_trabajo_id": 1020, "tecnico_ref": "t1", "fecha_cierre": "2026-09-21", "margen_real": "50.00", "horas_registradas": 2, "tipo_reparacion": "servicio_completo", "dentro_de_tiempo": true, "es_reproceso": false },
+    { "orden_trabajo_id": 1021, "tecnico_ref": "t1", "fecha_cierre": "2026-09-22", "margen_real": "50.00", "horas_registradas": 2, "tipo_reparacion": "servicio_completo", "dentro_de_tiempo": false, "es_reproceso": true },
+    { "orden_trabajo_id": 1022, "tecnico_ref": "t1", "fecha_cierre": "2026-09-23", "margen_real": "50.00", "horas_registradas": 2, "tipo_reparacion": "servicio_completo", "dentro_de_tiempo": false, "es_reproceso": false },
+    { "orden_trabajo_id": 2001, "tecnico_ref": "t1", "fecha_cierre": "2026-10-02", "margen_real": "999.00", "horas_registradas": 2, "tipo_reparacion": "servicio_completo", "dentro_de_tiempo": true, "es_reproceso": false }
+  ]
+}

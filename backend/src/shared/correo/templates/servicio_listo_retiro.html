@@ -1,0 +1,14 @@
+{% extends "_layout.html" %}
+{% block titulo %}Su reloj está listo para retiro{% endblock %}
+{% block cuerpo %}
+<p style="margin:0 0 16px;">Estimado/a {{ cliente_nombre }},</p>
+<p style="margin:0 0 16px;">Su reloj de la orden <strong>{{ ot_numero }}</strong> ya está óptimo y listo para que pase a retirarlo.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 20px;background-color:#F5F2EA;border:1px solid #E0D7C3;border-radius:8px;">
+  <tr><td style="padding:14px 18px;font-family:'Hanken Grotesk',Georgia,'Segoe UI',sans-serif;font-size:14px;color:#22252B;">
+    <strong style="color:#8B909A;text-transform:uppercase;font-size:11px;letter-spacing:1px;">{{ sucursal_nombre }}</strong>
+    {% if sucursal_direccion %}<br />{{ sucursal_direccion }}{% endif %}
+    <br /><span style="color:#8B909A;">Horario de atención:</span> {{ horario }}
+  </td></tr>
+</table>
+<p style="margin:0;color:#8B909A;font-size:13px;">Recuerde que el servicio se cobra al momento del retiro, según el método de pago que elija.</p>
+{% endblock %}

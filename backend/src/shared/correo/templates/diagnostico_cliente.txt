@@ -1,0 +1,18 @@
+Estimado/a {{ cliente_nombre }},
+
+Nuestro técnico completó el diagnóstico de su orden {{ ot_numero }}.
+
+Diagnóstico: {{ diagnostico }}
+
+{% if requiere_piezas %}
+La reparación requiere el cambio de las siguientes piezas. Para cada una puede elegir pieza original o una pieza de buena calidad disponible en la sucursal — el costo es ADICIONAL al costo del servicio (mano de obra), ya calculado aparte.
+{% for ln in lineas %}
+- {{ ln.descripcion }} (×{{ ln.cantidad }}): original ${{ ln.precio_original }}{% if ln.precio_no_original %} / buena calidad ${{ ln.precio_no_original }}{% endif %}
+{% endfor %}
+
+Escríbanos a {{ contacto_email }} o responda a nuestro vendedor indicando su preferencia, y procederemos con la reparación.
+{% else %}
+La reparación no requiere cambio de piezas — nuestro técnico procederá directamente. No necesita responder este correo.
+{% endif %}
+
+Le avisaremos por este medio en cuanto el reloj esté listo para retiro.

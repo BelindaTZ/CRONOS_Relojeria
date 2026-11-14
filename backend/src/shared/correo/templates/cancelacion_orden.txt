@@ -1,0 +1,10 @@
+CRONOS — Orden de compra #{{ orden }} cancelada
+
+Estimados {{ proveedor }},
+
+La orden de compra #{{ orden }} ha sido cancelada.
+
+Motivo: {{ motivo }}
+Fecha: {{ fecha }}
+
+Si ya habían iniciado la preparación del pedido, contáctennos para coordinar.

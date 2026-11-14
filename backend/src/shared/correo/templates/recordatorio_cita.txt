@@ -1,0 +1,9 @@
+Estimado/a {{ cliente_nombre }},
+
+Le recordamos su cita en CRONOS.
+
+{{ fecha_texto }}
+Motivo: {{ motivo }}
+{{ sucursal_nombre }}{% if sucursal_direccion %} · {{ sucursal_direccion }}{% endif %}
+
+Si necesita reprogramar, contáctenos a {{ contacto_email }}.

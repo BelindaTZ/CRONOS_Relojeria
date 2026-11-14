@@ -1,0 +1,141 @@
+openapi: 3.1.0
+info: { title: "CRONOS — Servicio Técnico / Órdenes de Trabajo (008)", version: "0.1.0" }
+servers: [{ url: http://localhost:8000 }]
+security: [{ bearerAuth: [] }]
+paths:
+  /ordenes-trabajo:
+    get:
+      operationId: listOrdenesTrabajo
+      parameters:
+        - { name: estado, in: query, schema: { type: string } }
+        - { name: tecnico_id, in: query, schema: { type: integer } }
+        - { name: sucursal_id, in: query, schema: { type: integer } }
+        - { name: numero_serie, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+      responses: { "200": { description: "Tablero de OT (técnico ve solo las propias)" } }
+    post:
+      operationId: createOrdenTrabajo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [numero_serie, cliente_id, motivo, tipo_reparacion]
+              properties:
+                numero_serie: { type: string }
+                cliente_id: { type: integer }
+                motivo: { type: string }
+                tipo_reparacion: { type: string }
+                cita_id: { type: integer, nullable: true }
+      responses:
+        "201": { description: OT en estado recibido (sin fecha estimada) }
+        "409": { description: Reloj en tránsito }
+        "422": { description: Reloj no adquirido en la tienda — requiere autorización }
+  /ordenes-trabajo/{id}:
+    get: { operationId: getOrdenTrabajo, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { "200": { description: OT (costo/margen solo rol administrativo) } } }
+    patch:
+      operationId: updateOrdenTrabajo
+      description: Asignar técnico dispara email al cliente con los datos del técnico.
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { "200": { description: Actualizada } }
+  /ordenes-trabajo/{id}/diagnostico:
+    post:
+      operationId: registrarDiagnostico
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { "200": { description: Estado en_diagnostico } }
+  /ordenes-trabajo/{id}/presupuesto:
+    post:
+      operationId: crearPresupuesto
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                precio_servicio: { type: number }
+                lineas:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      pieza_original_id: { type: integer }
+                      pieza_no_original_id: { type: integer, nullable: true }
+                      cantidad: { type: integer }
+      responses: { "201": { description: Presupuesto en borrador con opciones de pieza } }
+  /ordenes-trabajo/{id}/presupuesto/aprobar:
+    post:
+      operationId: aprobarPresupuesto
+      description: Registra la preferencia de piezas del cliente (confirmada fuera del sistema) y fija fecha_estimada_entrega.
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirmado_por]
+              properties:
+                preferencias: { type: array, items: { type: object } }
+                confirmado_por: { type: string }
+                medio_confirmacion: { type: string }
+      responses: { "200": { description: Presupuesto aprobado; fecha estimada registrada } }
+  /ordenes-trabajo/{id}/piezas:
+    post: { operationId: agregarPiezaOt, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { "201": { description: Pieza registrada; stock descontado }, "409": { description: Stock insuficiente } } }
+  /ordenes-trabajo/{id}/lubricacion:
+    post: { operationId: registrarLubricacionOt, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { "201": { description: Registro por punto (recomendado vs. usado); consumo de insumo } } }
+  /ordenes-trabajo/{id}/horas:
+    post: { operationId: registrarHorasOt, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { "200": { description: Horas trabajadas registradas } } }
+  /ordenes-trabajo/{id}/costeo:
+    get: { operationId: getCosteoOt, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { "200": { description: "{ costo_mano_obra, costo_piezas, costo_insumos, costo_interno, precio_sugerido, margen_real } (solo rol administrativo)" }, "403": { description: Sin permiso } } }
+  /ordenes-trabajo/{id}/descuento:
+    post: { operationId: aplicarDescuentoOt, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { "200": { description: Descuento aplicado (decisión de margen mínimo) }, "409": { description: Requiere autorización de Gerencia General } } }
+  /ordenes-trabajo/{id}/pagos:
+    post:
+      operationId: registrarPagoOt
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody: { content: { application/json: { schema: { type: object, required: [medio_pago, monto], properties: { medio_pago: { type: string }, monto: { type: number }, referencia: { type: string } } } } } }
+      responses: { "201": { description: "Pago registrado; devuelve saldo" } }
+  /ordenes-trabajo/{id}/estado:
+    post: { operationId: cambiarEstadoOt, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { "200": { description: Estado cambiado }, "409": { description: Transición inválida (p. ej. reparación sin presupuesto aprobado) } } }
+  /ordenes-trabajo/{id}/entregar:
+    post:
+      operationId: entregarOt
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { autorizacion_credito_id: { type: integer, nullable: true } } } } } }
+      responses:
+        "200": { description: Entregada; documento OT + certificado en comprobantes-venta; evento_serie servicio }
+        "409": { description: "Saldo > 0 y sin autorización de crédito" }
+  /ordenes-trabajo/{id}/reabrir-garantia:
+    post: { operationId: reabrirPorGarantia, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { "201": { description: OT de reapertura vinculada a la original } } }
+  /ordenes-trabajo/{id}/reportar-dano:
+    post: { operationId: reportarDanoOt, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { "200": { description: "Payload para POST /mermas (011, causa dano_servicio)" } } }
+  /informe-servicios:
+    get:
+      operationId: getInformeServicios
+      parameters:
+        - { name: cliente_id, in: query, schema: { type: integer } }
+        - { name: tecnico_id, in: query, schema: { type: integer } }
+        - { name: numero_serie, in: query, schema: { type: string } }
+        - { name: desde, in: query, schema: { type: string, format: date } }
+        - { name: hasta, in: query, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: Informe operativo de servicios/arreglos (exportable)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    cliente: { type: string }
+                    fecha: { type: string, format: date }
+                    numero_serie: { type: string }
+                    trabajo_realizado: { type: string }
+                    repuestos: { type: array, items: { type: string } }
+                    precio_arreglo: { type: number }
+  /ordenes-trabajo-en-curso:
+    get: { operationId: getOtEnCurso, responses: { "200": { description: "Reporte operativo §4.11.1" } } }
+components:
+  securitySchemes: { bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT } }

@@ -1,0 +1,6 @@
+# Dependencias del pipeline ELT (feature 012), instaladas SOBRE la imagen oficial
+# de Airflow (que ya trae apache-airflow + su propio psycopg2 para la metadata DB).
+psycopg[binary]>=3.2,<3.3
+clickhouse-connect>=0.7,<0.9
+minio>=7.2,<8.0
+pytest>=8.3,<9.0

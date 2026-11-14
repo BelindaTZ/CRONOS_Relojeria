@@ -1,0 +1,7 @@
+Estimado/a {{ cliente_nombre }},
+
+La orden de trabajo {{ ot_numero }} fue cancelada.
+{% if motivo %}
+Motivo: {{ motivo }}
+{% endif %}
+Si tiene dudas, escríbanos a {{ contacto_email }}.

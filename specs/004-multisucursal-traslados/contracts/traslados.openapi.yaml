@@ -1,0 +1,98 @@
+openapi: 3.1.0
+info: { title: "CRONOS — Traslados de Inventario (004)", version: "0.1.0" }
+servers: [{ url: http://localhost:8000 }]
+security: [{ bearerAuth: [] }]
+paths:
+  /transferencias:
+    get:
+      operationId: listTransferencias
+      parameters:
+        - { name: sucursal_id, in: query, schema: { type: integer } }
+        - { name: estado, in: query, schema: { type: string } }
+        - { name: numero_serie, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+      responses: { "200": { description: Página de transferencias (scope por sucursal según rol) } }
+    post:
+      operationId: createTransferencia
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sucursal_origen_id, sucursal_destino_id, motivo, lineas]
+              properties:
+                sucursal_origen_id: { type: integer }
+                sucursal_destino_id: { type: integer }
+                motivo: { type: string, minLength: 3 }
+                lineas:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      item_tipo: { type: string, enum: [reloj, pieza] }
+                      reloj_id: { type: integer, nullable: true }
+                      pieza_id: { type: integer, nullable: true }
+                      cantidad_enviada: { type: integer, default: 1 }
+      responses:
+        "201": { description: Transferencia en_preparacion }
+        "422": { description: origen == destino o sin destino posible (1 sola sucursal) }
+  /transferencias/{id}/enviar:
+    post:
+      operationId: enviarTransferencia
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody: { content: { application/json: { schema: { type: object, required: [responsable_envio_id], properties: { responsable_envio_id: { type: integer } } } } } }
+      responses:
+        "200": { description: en_transito; ítems no disponibles en origen }
+        "409": { description: algún ítem ya no está disponible }
+  /transferencias/{id}/recibir:
+    post:
+      operationId: recibirTransferencia
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lineas]
+              properties:
+                responsable_recepcion_id: { type: integer }
+                lineas:
+                  type: array
+                  items:
+                    type: object
+                    required: [linea_transferencia_id, cantidad_recibida]
+                    properties:
+                      linea_transferencia_id: { type: integer }
+                      cantidad_recibida: { type: integer }
+      responses:
+        "200": { description: recibida o parcial; inventario actualizado en ambas sucursales }
+        "409": { description: ya recibida (idempotente) }
+  /transferencias/{id}/cancelar:
+    post:
+      operationId: cancelarTransferencia
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody: { content: { application/json: { schema: { type: object, required: [motivo], properties: { motivo: { type: string } } } } } }
+      responses:
+        "200": { description: cancelada; ítems vuelven a disponible en origen }
+        "409": { description: estado no cancelable }
+  /transferencias/{id}/discrepancias:
+    get:
+      operationId: listDiscrepancias
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200":
+          description: Discrepancias con acción para crear merma (011)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    linea_transferencia_id: { type: integer }
+                    cantidad_faltante: { type: integer }
+                    accion_merma: { type: object, description: "cuerpo para POST /mermas (011), causa dano_transito" }
+components:
+  securitySchemes: { bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT } }

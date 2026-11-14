@@ -1,0 +1,102 @@
+openapi: 3.1.0
+info: { title: "CRONOS — Proveedores y Compras (002)", version: "0.1.0" }
+servers: [{ url: http://localhost:8000 }]
+security: [{ bearerAuth: [] }]
+paths:
+  /proveedores:
+    get:
+      operationId: listProveedores
+      description: Búsqueda multi-criterio (razón social, RUC/NIT, email, teléfono). Paginado.
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: tipo, in: query, schema: { type: string } }
+        - { name: estado, in: query, schema: { type: string, enum: [activo, inactivo] } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+      responses: { "200": { description: Página de proveedores } }
+    post:
+      operationId: createProveedor
+      responses: { "201": { description: Creado }, "409": { description: RUC/NIT duplicado } }
+  /proveedores/{id}:
+    get: { operationId: getProveedor, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { "200": { description: Ficha + historial de compras + calificación } } }
+    patch:
+      operationId: updateProveedor
+      description: razon_social y ruc_nit solo con rol elevado. Auditado.
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { "200": { description: Actualizado }, "403": { description: Campo restringido a rol elevado } }
+  /proveedores/{id}/inactivar:
+    post: { operationId: inactivarProveedor, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { "200": { description: Inactivado }, "409": { description: Usar inactivar, no eliminar } } }
+  /proveedores/{id}/documentos:
+    post:
+      operationId: subirDocumentoProveedor
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody: { content: { multipart/form-data: { schema: { type: object, properties: { tipo: { type: string }, archivo: { type: string, format: binary } } } } } }
+      responses: { "201": { description: Documento subido a bucket documentos } }
+  /proveedores/{id}/calificaciones:
+    post:
+      operationId: calificarProveedor
+      description: nota_calidad y nota_soporte manuales; nota_plazos es derivada e ignorada si se envía.
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { "201": { description: Calificación registrada (historial) } }
+  /ordenes-compra:
+    get:
+      operationId: listOrdenesCompra
+      parameters:
+        - { name: proveedor_id, in: query, schema: { type: integer } }
+        - { name: tipo, in: query, schema: { type: string, enum: [puntual, programada] } }
+        - { name: estado, in: query, schema: { type: string } }
+      responses: { "200": { description: Página de órdenes } }
+    post: { operationId: createOrdenCompra, responses: { "201": { description: Orden en borrador } } }
+  /ordenes-compra/prellenar:
+    post:
+      operationId: prellenarOrdenCompra
+      description: Devuelve un borrador con proveedor, ítem y cantidad sugerida (invocado por 003).
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [item_tipo, item_ref, cantidad_sugerida], properties: { proveedor_id: { type: integer, nullable: true }, item_tipo: { type: string, enum: [reloj, pieza] }, item_ref: { type: string }, cantidad_sugerida: { type: integer } } } } }
+      responses: { "200": { description: Borrador prellenado } }
+  /ordenes-compra/{id}:
+    patch:
+      operationId: corregirOrdenCompra
+      description: Corrección de una orden recibida. Requiere rol elevado y motivo. Auditado.
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [motivo], properties: { motivo: { type: string }, lineas: { type: array, items: { type: object } } } } } } }
+      responses: { "200": { description: Corregido (auditado) }, "403": { description: Rol no elevado } }
+  /ordenes-compra/{id}/emitir:
+    post: { operationId: emitirOrdenCompra, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { "200": { description: Orden emitida } } }
+  /ordenes-compra/{id}/recepciones:
+    post:
+      operationId: registrarRecepcion
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fecha_real, lineas]
+              properties:
+                fecha_real: { type: string, format: date }
+                lineas:
+                  type: array
+                  items:
+                    type: object
+                    required: [linea_orden_compra_id, cantidad_recibida]
+                    properties:
+                      linea_orden_compra_id: { type: integer }
+                      cantidad_recibida: { type: integer }
+                      lote: { type: string, nullable: true }
+                      fecha_caducidad: { type: string, format: date, nullable: true }
+      responses:
+        "201": { description: Recepción registrada; inventario (003) actualizado }
+        "422": { description: Ítem perecedero sin lote/fecha_caducidad }
+  /compras-programadas:
+    get: { operationId: listComprasProgramadas, responses: { "200": { description: Lista } } }
+    post: { operationId: createCompraProgramada, responses: { "201": { description: Programada creada } } }
+  /compras-programadas/{id}/estado:
+    put:
+      operationId: setEstadoCompraProgramada
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { estado: { type: string, enum: [activa, pausada, cancelada] } } } } } }
+      responses: { "200": { description: Estado actualizado } }
+components:
+  securitySchemes: { bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT } }

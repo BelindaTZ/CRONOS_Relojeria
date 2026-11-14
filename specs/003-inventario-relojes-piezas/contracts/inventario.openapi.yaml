@@ -1,0 +1,102 @@
+openapi: 3.1.0
+info: { title: "CRONOS — Inventario de Relojes y Calibres (003)", version: "0.1.0" }
+servers: [{ url: http://localhost:8000 }]
+security: [{ bearerAuth: [] }]
+paths:
+  /relojes:
+    get:
+      operationId: listRelojes
+      description: Búsqueda multi-criterio (marca, referencia, número de serie, calibre, sucursal, estado). Paginado.
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: marca, in: query, schema: { type: string } }
+        - { name: sucursal_id, in: query, schema: { type: integer } }
+        - { name: disponibilidad, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+      responses: { "200": { description: Página de relojes (costo_adquisicion solo si el rol tiene ver_costos) } }
+    post:
+      operationId: createReloj
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                data: { type: string, description: JSON de la ficha }
+                foto: { type: string, format: binary }
+      responses:
+        "201": { description: Unidad creada; evento_serie ingreso }
+        "409": { description: numero_serie duplicado }
+  /relojes/{serie}:
+    get:
+      operationId: getReloj
+      parameters: [{ name: serie, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: Ficha completa + fotos } , "404": { description: No existe } }
+  /relojes/{id}:
+    patch:
+      operationId: corregirReloj
+      description: Corrección de numero_serie u otros datos. Rol elevado + motivo. Genera evento_serie(correccion) + auditoría.
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [motivo] } } } }
+      responses: { "200": { description: Corregido }, "403": { description: Rol no elevado } }
+  /relojes/{serie}/historial:
+    get:
+      operationId: getHistorialSerie
+      parameters: [{ name: serie, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: Eventos append-only en orden cronológico
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    tipo: { type: string, enum: [ingreso, venta, servicio, transferencia, baja, reingreso, correccion] }
+                    fecha: { type: string, format: date-time }
+                    documento_tipo: { type: string }
+                    documento_id: { type: integer }
+                    detalle: { type: object }
+  /relojes/{id}/fotos:
+    post:
+      operationId: addFotoReloj
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody: { content: { multipart/form-data: { schema: { type: object, properties: { foto: { type: string, format: binary } } } } } }
+      responses: { "201": { description: Foto añadida a reloj-imagenes } }
+  /calibres:
+    get: { operationId: listCalibres, responses: { "200": { description: Catálogo de calibres } } }
+    post: { operationId: createCalibre, responses: { "201": { description: Calibre creado } } }
+  /alertas-stock:
+    get:
+      operationId: listAlertasStock
+      parameters:
+        - { name: tipo, in: query, schema: { type: string, enum: [cerca_maximo, ultima_unidad, bajo_minimo, caducidad_proxima, lote_vencido] } }
+        - { name: sucursal_id, in: query, schema: { type: integer } }
+      responses:
+        "200":
+          description: Alertas abiertas. Cada alerta incluye la acción de reposición.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    tipo: { type: string }
+                    ref: { type: string }
+                    sucursal_id: { type: integer }
+                    accion_reponer:
+                      type: object
+                      description: cuerpo para POST /ordenes-compra/prellenar (002)
+                      properties:
+                        item_tipo: { type: string }
+                        item_ref: { type: string }
+                        cantidad_sugerida: { type: integer }
+  /valor-inventario:
+    get:
+      operationId: getValorInventario
+      parameters: [{ name: sucursal_id, in: query, schema: { type: integer } }]
+      responses: { "200": { description: "{ a_costo, a_precio_venta } (a_costo solo con ver_costos)" } }
+components:
+  securitySchemes: { bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT } }

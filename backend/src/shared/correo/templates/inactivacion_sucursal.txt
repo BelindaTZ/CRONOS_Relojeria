@@ -1,0 +1,11 @@
+CRONOS — La sucursal {{ sucursal }} fue inactivada
+
+Hola {{ nombre }},
+
+La sucursal "{{ sucursal }}", a la que estás asignado/a, ha sido inactivada.
+
+Motivo: {{ motivo }}
+Fecha: {{ fecha }}
+
+A partir de ahora no podrás registrar operaciones en esa sucursal. Si tienes
+tareas pendientes vinculadas a ella, contacta a Gerencia General.

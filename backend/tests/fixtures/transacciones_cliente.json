@@ -1,0 +1,16 @@
+{
+  "_comment": "Transacciones de prueba para el motor de nivel de fidelización (006) hasta que existan 008/009. cliente_ref se mapea al id real del cliente en el test.",
+  "transacciones": [
+    { "cliente_ref": "c_frecuente", "fecha": "2026-02-10", "monto": "1200.00", "tipo": "venta", "documento_id": 5001, "detalle": "Omega Seamaster" },
+    { "cliente_ref": "c_frecuente", "fecha": "2026-04-22", "monto": "1800.00", "tipo": "venta", "documento_id": 5002, "detalle": "Tudor Black Bay" },
+    { "cliente_ref": "c_frecuente", "fecha": "2026-06-15", "monto": "2500.00", "tipo": "venta", "documento_id": 5003, "detalle": "Rolex Datejust (usado propio)" },
+    { "cliente_ref": "c_frecuente", "fecha": "2026-08-01", "monto": "300.00", "tipo": "servicio", "documento_id": 7001, "detalle": "Servicio completo" },
+
+    { "cliente_ref": "c_ocasional", "fecha": "2026-05-05", "monto": "450.00", "tipo": "servicio", "documento_id": 7010, "detalle": "Cambio de cristal" },
+    { "cliente_ref": "c_ocasional", "fecha": "2019-01-01", "monto": "9000.00", "tipo": "venta", "documento_id": 4000, "detalle": "Compra antigua (fuera de ventana)" },
+
+    { "cliente_ref": "c_vip", "fecha": "2026-01-20", "monto": "6000.00", "tipo": "venta", "documento_id": 5100 },
+    { "cliente_ref": "c_vip", "fecha": "2026-03-12", "monto": "7500.00", "tipo": "venta", "documento_id": 5101 },
+    { "cliente_ref": "c_vip", "fecha": "2026-07-30", "monto": "4200.00", "tipo": "servicio", "documento_id": 7100 }
+  ]
+}

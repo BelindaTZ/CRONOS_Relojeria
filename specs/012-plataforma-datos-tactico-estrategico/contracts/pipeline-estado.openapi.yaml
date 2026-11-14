@@ -1,0 +1,42 @@
+openapi: 3.1.0
+info:
+  title: "CRONOS — Estado del pipeline ELT (012)"
+  version: "0.1.0"
+  description: >
+    Único punto de contacto entre la plataforma de datos y el backend operativo.
+    Solo lectura del estado de frescura + disparo manual del DAG. 013 lo consume.
+servers: [{ url: http://localhost:8000 }]
+security: [{ bearerAuth: [] }]
+paths:
+  /reportes/estado-frescura:
+    get:
+      operationId: getEstadoFrescura
+      responses:
+        "200":
+          description: Frescura por dominio; si ClickHouse/Airflow no responden, indica no disponible sin error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  disponible: { type: boolean }
+                  dominios:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        dominio: { type: string }
+                        ultima_carga_ts: { type: string, format: date-time, nullable: true }
+                        max_updated_at_origen: { type: string, format: date-time, nullable: true }
+                        ultimo_run_id: { type: string, nullable: true }
+                        estado_ultima_corrida: { type: string, enum: [ok, error, sin_datos] }
+  /reportes/actualizar-ahora:
+    post:
+      operationId: dispararActualizacion
+      description: Dispara una corrida manual del DAG elt_operativo (Airflow REST API). Solo roles con acceso a Reportes.
+      responses:
+        "202": { description: Corrida encolada }
+        "409": { description: Ya hay una corrida en curso }
+        "503": { description: Airflow no disponible }
+components:
+  securitySchemes: { bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT } }

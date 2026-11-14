@@ -1,0 +1,17 @@
+{% extends "_layout.html" %}
+{% block titulo %}Su factura {{ numero_factura }}{% endblock %}
+{% block cuerpo %}
+<p style="margin:0 0 16px;">Estimado/a {{ cliente_nombre }},</p>
+<p style="margin:0 0 16px;">Adjuntamos la factura de su compra en CRONOS Relojería.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 20px;background-color:#F5F2EA;border:1px solid #E0D7C3;border-radius:8px;">
+  <tr><td style="padding:14px 18px;font-family:'Hanken Grotesk',Georgia,'Segoe UI',sans-serif;font-size:14px;color:#22252B;">
+    <strong style="color:#8B909A;text-transform:uppercase;font-size:11px;letter-spacing:1px;">Factura</strong><br />
+    N.º {{ numero_factura }} &nbsp;·&nbsp; Total: {{ total }}
+  </td></tr>
+</table>
+{% if url_factura %}
+<p style="margin:0 0 16px;"><a href="{{ url_factura }}" style="color:#8A6D2B;">Descargar la factura en PDF</a></p>
+{% endif %}
+<p style="margin:0 0 16px;">Conserve este documento junto con el certificado de autenticidad y garantía de su reloj.</p>
+<p style="margin:0;color:#8B909A;font-size:13px;">Gracias por su confianza.</p>
+{% endblock %}
